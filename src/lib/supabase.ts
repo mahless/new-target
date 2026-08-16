@@ -73,6 +73,26 @@ function saveLocal<T>(key: string, value: T): void {
   }
 }
 
+// Helper to ensure any custom string ID (e.g. b1-dokki) is formatted as a valid UUID for Postgres UUID columns
+export function toValidUuid(val: string | null | undefined): string | null {
+  if (!val) return null;
+  const str = String(val).trim();
+  if (!str) return null;
+
+  // If already a valid UUID hex format
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  if (isUuid) return str;
+
+  // Convert custom string deterministically to a valid UUID format
+  let hex = '';
+  for (let i = 0; i < str.length; i++) {
+    hex += (str.charCodeAt(i) % 256).toString(16).padStart(2, '0');
+  }
+  hex = (hex + '0'.repeat(32)).slice(0, 32);
+
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
 export interface SyncReport {
   success: boolean;
   message: string;
@@ -101,7 +121,7 @@ export const supabaseSyncService = {
       if (branches.length > 0) {
         const { error } = await supabase.from('branches').upsert(
           branches.map(b => ({
-            id: b.id,
+            id: toValidUuid(b.id),
             name: b.name,
             code: b.code,
             phone: b.phone || null,
@@ -119,7 +139,7 @@ export const supabaseSyncService = {
       if (employees.length > 0) {
         const { error } = await supabase.from('employees').upsert(
           employees.map(e => ({
-            id: e.id,
+            id: toValidUuid(e.id),
             name: e.name,
             code: e.code || `EMP-${e.id}`,
             username: e.username || e.email || e.id,
@@ -127,8 +147,8 @@ export const supabaseSyncService = {
             phone: e.phone || null,
             pin_code: e.pin_code || e.password || '1234',
             password_hash: e.password || null,
-            branch_id: e.branch_id || null,
-            default_branch_id: e.default_branch_id || null,
+            branch_id: toValidUuid(e.branch_id),
+            default_branch_id: toValidUuid(e.default_branch_id),
             role: e.role || 'employee',
             is_active: e.is_active ?? true,
             created_at: e.created_at,
@@ -142,7 +162,7 @@ export const supabaseSyncService = {
       if (services.length > 0) {
         const { error } = await supabase.from('services').upsert(
           services.map(s => ({
-            id: s.id,
+            id: toValidUuid(s.id),
             name: s.name,
             category: s.category || '',
             base_price: s.base_price,
@@ -161,7 +181,7 @@ export const supabaseSyncService = {
       if (customers.length > 0) {
         const { error } = await supabase.from('customers').upsert(
           customers.map(c => ({
-            id: c.id,
+            id: toValidUuid(c.id),
             name: c.name,
             phone: c.phone,
             national_id: c.national_id || null,
@@ -177,7 +197,7 @@ export const supabaseSyncService = {
       if (distributors.length > 0) {
         const { error } = await supabase.from('distributors').upsert(
           distributors.map(d => ({
-            id: d.id,
+            id: toValidUuid(d.id),
             name: d.name,
             phone: d.phone,
             code: d.code,
@@ -194,7 +214,7 @@ export const supabaseSyncService = {
       if (offices.length > 0) {
         const { error } = await supabase.from('external_offices').upsert(
           offices.map(o => ({
-            id: o.id,
+            id: toValidUuid(o.id),
             name: o.name,
             contact_person: o.contact_person || null,
             phone: o.phone,
@@ -212,7 +232,7 @@ export const supabaseSyncService = {
       if (categories.length > 0) {
         const { error } = await supabase.from('expense_categories').upsert(
           categories.map(c => ({
-            id: c.id,
+            id: toValidUuid(c.id),
             name: c.name,
             is_active: c.is_active ?? true,
             created_at: c.created_at,
@@ -226,13 +246,13 @@ export const supabaseSyncService = {
       if (orders.length > 0) {
         const { error } = await supabase.from('service_orders').upsert(
           orders.map(o => ({
-            id: o.id,
+            id: toValidUuid(o.id),
             order_number: o.order_number,
-            customer_id: o.customer_id,
+            customer_id: toValidUuid(o.customer_id),
             customer_name: o.customer_name,
             customer_phone: o.customer_phone,
             customer_national_id: o.customer_national_id || null,
-            service_id: o.service_id,
+            service_id: toValidUuid(o.service_id),
             service_name: o.service_name,
             speed: o.speed || 'normal',
             form_barcode: o.form_barcode || null,
@@ -243,14 +263,14 @@ export const supabaseSyncService = {
             price: o.price,
             total_paid: o.total_paid,
             remaining: o.remaining,
-            distributor_id: o.distributor_id || null,
-            external_office_id: o.external_office_id || null,
+            distributor_id: toValidUuid(o.distributor_id),
+            external_office_id: toValidUuid(o.external_office_id),
             external_office_cost: o.external_office_cost || 0.0,
             office_margin: o.office_margin || 0.0,
-            creation_branch_id: o.creation_branch_id,
-            current_branch_id: o.current_branch_id,
-            delivery_branch_id: o.delivery_branch_id || null,
-            created_by_employee_id: o.created_by_employee_id,
+            creation_branch_id: toValidUuid(o.creation_branch_id),
+            current_branch_id: toValidUuid(o.current_branch_id),
+            delivery_branch_id: toValidUuid(o.delivery_branch_id),
+            created_by_employee_id: toValidUuid(o.created_by_employee_id),
             idempotency_key: o.idempotency_key,
             created_at: o.created_at,
             updated_at: o.updated_at || o.created_at,
@@ -264,10 +284,10 @@ export const supabaseSyncService = {
       if (payments.length > 0) {
         const { error } = await supabase.from('payments').upsert(
           payments.map(p => ({
-            id: p.id,
-            order_id: p.order_id,
-            branch_id: p.branch_id,
-            employee_id: p.employee_id,
+            id: toValidUuid(p.id),
+            order_id: toValidUuid(p.order_id),
+            branch_id: toValidUuid(p.branch_id),
+            employee_id: toValidUuid(p.employee_id),
             amount: p.amount,
             cash_amount: p.cash_amount ?? p.amount,
             electronic_amount: p.electronic_amount ?? 0,
@@ -285,14 +305,14 @@ export const supabaseSyncService = {
       if (ledger.length > 0) {
         const { error } = await supabase.from('cash_ledger').upsert(
           ledger.map(l => ({
-            id: l.id,
-            branch_id: l.branch_id,
-            employee_id: l.employee_id || null,
+            id: toValidUuid(l.id),
+            branch_id: toValidUuid(l.branch_id),
+            employee_id: toValidUuid(l.employee_id),
             transaction_type: l.transaction_type,
             amount: l.amount,
             balance_after: l.balance_after,
             reference_table: l.reference_table || null,
-            reference_id: l.reference_id || null,
+            reference_id: toValidUuid(l.reference_id),
             idempotency_key: l.idempotency_key || null,
             notes: l.notes || null,
             created_at: l.created_at,
@@ -306,13 +326,13 @@ export const supabaseSyncService = {
       if (distTxns.length > 0) {
         const { error } = await supabase.from('distributor_transactions').upsert(
           distTxns.map(t => ({
-            id: t.id,
-            distributor_id: t.distributor_id,
-            branch_id: t.branch_id || null,
-            employee_id: t.employee_id || null,
+            id: toValidUuid(t.id),
+            distributor_id: toValidUuid(t.distributor_id),
+            branch_id: toValidUuid(t.branch_id),
+            employee_id: toValidUuid(t.employee_id),
             amount: t.amount,
             type: t.type,
-            reference_id: t.reference_id || null,
+            reference_id: toValidUuid(t.reference_id),
             idempotency_key: t.idempotency_key || null,
             notes: t.notes || null,
             balance_after: t.balance_after || null,
@@ -327,14 +347,14 @@ export const supabaseSyncService = {
       if (expenses.length > 0) {
         const { error } = await supabase.from('expenses').upsert(
           expenses.map(e => ({
-            id: e.id,
-            branch_id: e.branch_id,
-            employee_id: e.employee_id,
-            category_id: e.category_id || null,
+            id: toValidUuid(e.id),
+            branch_id: toValidUuid(e.branch_id),
+            employee_id: toValidUuid(e.employee_id),
+            category_id: toValidUuid(e.category_id),
             category_name: e.category_name || e.category || 'عام',
             amount: e.amount,
-            related_order_id: e.related_order_id || null,
-            external_office_id: e.external_office_id || null,
+            related_order_id: toValidUuid(e.related_order_id),
+            external_office_id: toValidUuid(e.external_office_id),
             notes: e.notes || null,
             idempotency_key: e.idempotency_key,
             created_at: e.created_at,
@@ -348,13 +368,13 @@ export const supabaseSyncService = {
       if (transfers.length > 0) {
         const { error } = await supabase.from('branch_transfers').upsert(
           transfers.map(t => ({
-            id: t.id,
+            id: toValidUuid(t.id),
             reference_number: t.reference_number || `TX-${t.id}`,
-            from_branch_id: t.from_branch_id,
-            to_branch_id: t.to_branch_id,
+            from_branch_id: toValidUuid(t.from_branch_id),
+            to_branch_id: toValidUuid(t.to_branch_id),
             amount: t.amount,
-            sender_employee_id: t.sender_employee_id || t.employee_id || null,
-            receiver_employee_id: t.receiver_employee_id || null,
+            sender_employee_id: toValidUuid(t.sender_employee_id || t.employee_id),
+            receiver_employee_id: toValidUuid(t.receiver_employee_id),
             status: t.status || 'pending',
             notes: t.notes || null,
             idempotency_key: t.idempotency_key,
@@ -369,8 +389,8 @@ export const supabaseSyncService = {
       if (closings.length > 0) {
         const { error } = await supabase.from('daily_closings').upsert(
           closings.map(c => ({
-            id: c.id,
-            branch_id: c.branch_id,
+            id: toValidUuid(c.id),
+            branch_id: toValidUuid(c.branch_id),
             closing_date: c.closing_date,
             opening_balance: c.opening_balance || 0.0,
             system_calculated_balance: c.system_calculated_balance,
@@ -384,7 +404,7 @@ export const supabaseSyncService = {
             total_orders_count: c.total_orders_count || 0,
             total_expenses_count: c.total_expenses_count || 0,
             employee_name: c.employee_name || null,
-            closing_employee_id: c.closing_employee_id || null,
+            closing_employee_id: toValidUuid(c.closing_employee_id),
             notes: c.notes || null,
             created_at: c.created_at,
           }))
@@ -397,10 +417,10 @@ export const supabaseSyncService = {
       if (auditLogs.length > 0) {
         const { error } = await supabase.from('audit_logs').upsert(
           auditLogs.map(a => ({
-            id: a.id,
-            employee_id: a.employee_id || null,
+            id: toValidUuid(a.id),
+            employee_id: toValidUuid(a.employee_id),
             employee_name: a.employee_name,
-            branch_id: a.branch_id || null,
+            branch_id: toValidUuid(a.branch_id),
             action: a.action,
             entity: a.entity || 'General',
             entity_name: a.entity_name || null,

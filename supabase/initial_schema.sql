@@ -498,3 +498,82 @@ CREATE TRIGGER trg_transfers_updated_at
     BEFORE UPDATE ON branch_transfers
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- ------------------------------------------------------------------------------
+-- 5. ROW LEVEL SECURITY (RLS) & ACCESS POLICIES
+-- ------------------------------------------------------------------------------
+
+-- Disable RLS or create permissive policies to allow public/anon client access
+ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE distributors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE external_offices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expense_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE distributor_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE external_office_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE branch_transfers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_closings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idempotency_keys ENABLE ROW LEVEL SECURITY;
+
+-- Permissive policies for anon / authenticated roles
+DO $$
+BEGIN
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_branches" ON branches';
+    EXECUTE 'CREATE POLICY "Allow_all_branches" ON branches FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_employees" ON employees';
+    EXECUTE 'CREATE POLICY "Allow_all_employees" ON employees FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_services" ON services';
+    EXECUTE 'CREATE POLICY "Allow_all_services" ON services FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_customers" ON customers';
+    EXECUTE 'CREATE POLICY "Allow_all_customers" ON customers FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_distributors" ON distributors';
+    EXECUTE 'CREATE POLICY "Allow_all_distributors" ON distributors FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_external_offices" ON external_offices';
+    EXECUTE 'CREATE POLICY "Allow_all_external_offices" ON external_offices FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_expense_categories" ON expense_categories';
+    EXECUTE 'CREATE POLICY "Allow_all_expense_categories" ON expense_categories FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_service_orders" ON service_orders';
+    EXECUTE 'CREATE POLICY "Allow_all_service_orders" ON service_orders FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_payments" ON payments';
+    EXECUTE 'CREATE POLICY "Allow_all_payments" ON payments FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_cash_ledger" ON cash_ledger';
+    EXECUTE 'CREATE POLICY "Allow_all_cash_ledger" ON cash_ledger FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_distributor_transactions" ON distributor_transactions';
+    EXECUTE 'CREATE POLICY "Allow_all_distributor_transactions" ON distributor_transactions FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_external_office_transactions" ON external_office_transactions';
+    EXECUTE 'CREATE POLICY "Allow_all_external_office_transactions" ON external_office_transactions FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_expenses" ON expenses';
+    EXECUTE 'CREATE POLICY "Allow_all_expenses" ON expenses FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_branch_transfers" ON branch_transfers';
+    EXECUTE 'CREATE POLICY "Allow_all_branch_transfers" ON branch_transfers FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_daily_closings" ON daily_closings';
+    EXECUTE 'CREATE POLICY "Allow_all_daily_closings" ON daily_closings FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_audit_logs" ON audit_logs';
+    EXECUTE 'CREATE POLICY "Allow_all_audit_logs" ON audit_logs FOR ALL USING (true) WITH CHECK (true)';
+
+    EXECUTE 'DROP POLICY IF EXISTS "Allow_all_idempotency_keys" ON idempotency_keys';
+    EXECUTE 'CREATE POLICY "Allow_all_idempotency_keys" ON idempotency_keys FOR ALL USING (true) WITH CHECK (true)';
+END $$;
+
