@@ -20,8 +20,12 @@ const getEnv = (key: string): string => {
   return '';
 };
 
-const supabaseUrl = getEnv('VITE_SUPABASE_URL');
-const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY');
+const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseAnonKey =
+  getEnv('VITE_SUPABASE_ANON_KEY') ||
+  getEnv('VITE_SUPABASE_PUBLISHABLE_KEY') ||
+  getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+  getEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
