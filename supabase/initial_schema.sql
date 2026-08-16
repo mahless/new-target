@@ -19,7 +19,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Description: الفروع المستقلة تشغيلياً ومالياً
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS branches (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     code TEXT UNIQUE NOT NULL,
     phone TEXT,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS branches (
 -- Description: مستخدمو النظام مع حصر الصلاحيات في 3 أدوار (manager, employee, viewer)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS employees (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     code TEXT UNIQUE NOT NULL,
     username TEXT UNIQUE NOT NULL,
@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS employees (
     phone TEXT,
     pin_code TEXT NOT NULL,
     password_hash TEXT,
-    branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-    default_branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+    branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
+    default_branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
     role TEXT NOT NULL DEFAULT 'employee' CHECK (role IN ('manager', 'employee', 'viewer')),
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS employees (
 -- Description: الخدمات وسرعات التنفيذ (عادي، مستعجل، فوري...) وحقول الإدخال المخصصة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS services (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT '',
     base_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS services (
 -- Description: بيانات العملاء المسجلين والبحث بالرقم القومي أو الهاتف
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS customers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     phone TEXT NOT NULL,
     national_id VARCHAR(14),
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS customers (
 -- Description: الموزعون الذين تصدر لهم معاملات بالآجل ويقومون بتوريد مبالغ نقدية
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS distributors (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     phone TEXT NOT NULL,
     code TEXT UNIQUE NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS distributors (
 -- Description: مكاتب الترجمة والتوثيق والتنفيذ الخارجي ذات التكلفة المحددة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS external_offices (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     contact_person TEXT,
     phone TEXT NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS external_offices (
 -- Description: بنود الصرف التشغيلي (إيجار، كهرباء، صيانة، نثريات...)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS expense_categories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT UNIQUE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -143,13 +143,13 @@ CREATE TABLE IF NOT EXISTS expense_categories (
 -- Description: المعاملات الرئيسية متضمنة التفاصيل المالية، الموزع، والمكتب الخارجي
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS service_orders (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     order_number TEXT UNIQUE NOT NULL,
-    customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
     customer_name TEXT NOT NULL,
     customer_phone TEXT NOT NULL,
     customer_national_id VARCHAR(14),
-    service_id UUID NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
+    service_id TEXT NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
     service_name TEXT NOT NULL,
     speed TEXT NOT NULL DEFAULT 'normal',
     form_barcode TEXT,
@@ -160,14 +160,14 @@ CREATE TABLE IF NOT EXISTS service_orders (
     price NUMERIC(12, 2) NOT NULL,
     total_paid NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     remaining NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    distributor_id UUID REFERENCES distributors(id) ON DELETE SET NULL,
-    external_office_id UUID REFERENCES external_offices(id) ON DELETE SET NULL,
+    distributor_id TEXT REFERENCES distributors(id) ON DELETE SET NULL,
+    external_office_id TEXT REFERENCES external_offices(id) ON DELETE SET NULL,
     external_office_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     office_margin NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    creation_branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    current_branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    delivery_branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-    created_by_employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    creation_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    current_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    delivery_branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
+    created_by_employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
     idempotency_key TEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -183,10 +183,10 @@ CREATE TABLE IF NOT EXISTS service_orders (
 -- Description: سداد الدفعات الأولى والمتبقي مقسمة بين كاش وإلكتروني (محفظة، إنستاباي، نقاط بيع)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS payments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id UUID NOT NULL REFERENCES service_orders(id) ON DELETE CASCADE,
-    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    order_id TEXT NOT NULL REFERENCES service_orders(id) ON DELETE CASCADE,
+    branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
     amount NUMERIC(12, 2) NOT NULL,
     cash_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     electronic_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -205,9 +205,9 @@ CREATE TABLE IF NOT EXISTS payments (
 -- Description: سجل التدفقات النقدية غير القابل للتعديل لعهدة الموظف وخزينة الفرع
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS cash_ledger (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
     transaction_type TEXT NOT NULL CHECK (
         transaction_type IN (
             'customer_cash_payment',
@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS cash_ledger (
     amount NUMERIC(12, 2) NOT NULL, -- موجب للمقبوضات، سالب للمصروفات والتحويلات الخارجة
     balance_after NUMERIC(12, 2) NOT NULL,
     reference_table TEXT,
-    reference_id UUID,
+    reference_id TEXT,
     idempotency_key TEXT UNIQUE,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -237,13 +237,13 @@ CREATE TABLE IF NOT EXISTS cash_ledger (
 -- Description: قيد المديونية عند تسجيل طلب بالآجل أو السداد والتوريد النقدي
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS distributor_transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    distributor_id UUID NOT NULL REFERENCES distributors(id) ON DELETE CASCADE,
-    branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-    employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    distributor_id TEXT NOT NULL REFERENCES distributors(id) ON DELETE CASCADE,
+    branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
+    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     amount NUMERIC(12, 2) NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('order_charge', 'supply_payment', 'opening_balance')),
-    reference_id UUID,
+    reference_id TEXT,
     idempotency_key TEXT UNIQUE,
     notes TEXT,
     balance_after NUMERIC(12, 2),
@@ -256,13 +256,13 @@ CREATE TABLE IF NOT EXISTS distributor_transactions (
 -- Description: تتبع مستحقات مكاتب التنفيذ وسداد الدفعات لهم من الخزينة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS external_office_transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    external_office_id UUID NOT NULL REFERENCES external_offices(id) ON DELETE CASCADE,
-    branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
-    employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    external_office_id TEXT NOT NULL REFERENCES external_offices(id) ON DELETE CASCADE,
+    branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
+    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     amount NUMERIC(12, 2) NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('service_order_cost', 'office_payout', 'opening_balance')),
-    reference_id UUID,
+    reference_id TEXT,
     idempotency_key TEXT UNIQUE,
     notes TEXT,
     balance_after NUMERIC(12, 2),
@@ -274,14 +274,14 @@ CREATE TABLE IF NOT EXISTS external_office_transactions (
 -- Description: المصروفات المباشرة المخصومة من الخزينة النقدية للفرع
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS expenses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
-    category_id UUID REFERENCES expense_categories(id) ON DELETE SET NULL,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    category_id TEXT REFERENCES expense_categories(id) ON DELETE SET NULL,
     category_name TEXT NOT NULL,
     amount NUMERIC(12, 2) NOT NULL,
-    related_order_id UUID REFERENCES service_orders(id) ON DELETE SET NULL,
-    external_office_id UUID REFERENCES external_offices(id) ON DELETE SET NULL,
+    related_order_id TEXT REFERENCES service_orders(id) ON DELETE SET NULL,
+    external_office_id TEXT REFERENCES external_offices(id) ON DELETE SET NULL,
     notes TEXT,
     idempotency_key TEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -293,13 +293,13 @@ CREATE TABLE IF NOT EXISTS expenses (
 -- Description: تحويل النقد بين الفروع بحالة (pending, completed, rejected)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS branch_transfers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     reference_number TEXT UNIQUE NOT NULL,
-    from_branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    to_branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    from_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    to_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     amount NUMERIC(12, 2) NOT NULL,
-    sender_employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
-    receiver_employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+    sender_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    receiver_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'rejected')),
     notes TEXT,
     idempotency_key TEXT UNIQUE NOT NULL,
@@ -314,8 +314,8 @@ CREATE TABLE IF NOT EXISTS branch_transfers (
 -- Description: تسوية الرصيد الدفتري مع الجرد الفعلي، مع منع التكرار لليوم الواحد
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS daily_closings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     closing_date DATE NOT NULL,
     opening_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
     system_calculated_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS daily_closings (
     total_orders_count INTEGER NOT NULL DEFAULT 0,
     total_expenses_count INTEGER NOT NULL DEFAULT 0,
     employee_name TEXT,
-    closing_employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    closing_employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_branch_closing_date UNIQUE (branch_id, closing_date),
@@ -343,10 +343,10 @@ CREATE TABLE IF NOT EXISTS daily_closings (
 -- Description: تسجيل كافة العمليات، التعديلات، وبيانات قبل وبعد التغيير
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    employee_id UUID REFERENCES employees(id) ON DELETE SET NULL,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     employee_name TEXT NOT NULL,
-    branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+    branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
     action TEXT NOT NULL,
     entity TEXT NOT NULL,
     entity_name TEXT,
@@ -365,7 +365,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE TABLE IF NOT EXISTS idempotency_keys (
     key TEXT PRIMARY KEY,
     resource_type TEXT NOT NULL,
-    resource_id UUID,
+    resource_id TEXT,
     response_payload JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '24 hours')
