@@ -1,9 +1,9 @@
 -- ==============================================================================
--- FIX RLS PERMISSIONS & DISABLE RLS FOR ALL TABLES
--- Run this script ONCE in Supabase Dashboard -> SQL Editor to allow pushes
+-- FIX RLS PERMISSIONS, REALTIME & DISABLE RLS RESTRICTIONS FOR ALL TABLES
+-- Run this script ONCE in Supabase Dashboard -> SQL Editor
 -- ==============================================================================
 
--- 1. Disable RLS on all tables so anon key can push & pull data freely
+-- 1. Disable RLS on all tables so anon/publishable key can push & pull data freely
 ALTER TABLE IF EXISTS branches DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS employees DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS services DISABLE ROW LEVEL SECURITY;
@@ -33,4 +33,14 @@ BEGIN
     LOOP
         EXECUTE format('GRANT ALL ON TABLE %I TO anon, authenticated, postgres, service_role;', tbl);
     END LOOP;
+END $$;
+
+-- 3. Enable Realtime Live Streaming for all tables
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE branches, employees, services, customers, distributors, external_offices, expense_categories, service_orders, payments, cash_ledger, distributor_transactions, external_office_transactions, expenses, branch_transfers, daily_closings, audit_logs;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN NULL;
 END $$;

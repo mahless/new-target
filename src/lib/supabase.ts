@@ -821,3 +821,55 @@ export function triggerAutoPush(delayMs = 1000): void {
   }, delayMs);
 }
 
+/**
+ * Subscribes to real-time Postgres changes in Supabase.
+ * Whenever a manual or external change occurs in Supabase database tables,
+ * this listener automatically pulls the latest changes and refreshes the application.
+ */
+export function subscribeToRealtimeChanges(onDataChanged: () => void): () => void {
+  if (!isSupabaseConfigured || !supabase || typeof window === 'undefined') {
+    return () => {};
+  }
+
+  try {
+    const channel = supabase
+      .channel('public:realtime_db_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        async (payload: any) => {
+          console.log('[Realtime] DB change detected in table:', payload.table, payload.eventType);
+          try {
+            await supabaseSyncService.pullFromSupabase();
+            onDataChanged();
+          } catch (err) {
+            console.error('[Realtime] Auto-pull after DB change failed:', err);
+          }
+        }
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Connected & listening to Supabase live changes!');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  } catch (err) {
+    console.error('[Realtime] Subscription error:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Completely clears all local storage data keys.
+ */
+export function clearAllLocalData(): void {
+  if (typeof window === 'undefined') return;
+  Object.values(STORAGE_KEYS).forEach(key => {
+    localStorage.removeItem(key);
+  });
+}
+
+

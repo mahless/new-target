@@ -2160,6 +2160,12 @@ export class ResilientStorageService {
     });
     this.initializeDefaults();
   }
+
+  public clearAllLocalData(): void {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+  }
 }
 
 export const storage = ResilientStorageService.getInstance();

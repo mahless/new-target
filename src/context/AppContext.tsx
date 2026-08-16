@@ -24,7 +24,7 @@ import {
   FinancialViewScope,
 } from '../types';
 import { storage } from '../lib/storage';
-import { isSupabaseConfigured, triggerAutoPush } from '../lib/supabase';
+import { isSupabaseConfigured, triggerAutoPush, subscribeToRealtimeChanges, clearAllLocalData } from '../lib/supabase';
 
 export type NavigationTab =
   | 'operations'
@@ -76,6 +76,7 @@ interface AppContextType {
   branchDrawerBalance: number;
   isOnline: boolean;
   refreshData: () => void;
+  wipeLocalData: () => void;
   toasts: ToastNotification[];
   showToast: (type: ToastNotification['type'], title: string, message: string) => void;
   removeToast: (id: string) => void;
@@ -127,7 +128,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [selectedOrderIdForModal, setSelectedOrderIdForModal] = useState<string | null>(null);
 
-  // Online / Offline monitor & Auto Sync Initializer
+  // Online / Offline monitor & Realtime Subscription
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -149,9 +150,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       triggerAutoPush(1500);
     }
 
+    // Subscribe to Supabase Realtime DB changes
+    const unsubscribe = subscribeToRealtimeChanges(() => {
+      refreshData();
+    });
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsubscribe();
     };
   }, []);
 
@@ -270,6 +277,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const activeBranch = branches.find(b => b.id === activeBranchId) || branches[0] || null;
   const activeEmployee = employees.find(e => e.id === activeEmployeeId) || employees[0] || null;
 
+  const wipeLocalData = () => {
+    clearAllLocalData();
+    refreshData();
+    showToast('info', 'تم تفريغ البيانات المحلية', 'تم مسح جميع البيانات المخزنة محلياً بنجاح.');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -301,6 +314,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         branchDrawerBalance,
         isOnline,
         refreshData,
+        wipeLocalData,
         toasts,
         showToast,
         removeToast,

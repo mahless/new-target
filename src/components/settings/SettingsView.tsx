@@ -764,9 +764,33 @@ export const SettingsView: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 text-sky-400">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>نظام Idempotency Key مفعل لكافة المعاملات المالية</span>
+                  <span>المزامنة الفورية (Realtime Live Sync) نشطة تلقائياً</span>
                 </div>
               </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-950 border border-rose-950/50 space-y-3">
+              <h4 className="font-bold text-rose-400 text-xs flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4" />
+                <span>مسح البيانات المحلية الحالية</span>
+              </h4>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                مسح وتفريغ جميع العمليات المخبأة محلياً لبدء إدخال البيانات الصحيحة أو السحب النظيف من سوبابيز.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('تحذير: هل أنت متأكد تماماً من مسح كافة البيانات المحلية للتطبيق؟')) {
+                    storage.clearAllLocalData();
+                    refreshData();
+                    showToast('info', 'تم مسح البيانات المحلية', 'تم تفريغ التخزين المحلي بنجاح.');
+                  }
+                }}
+                className="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-2 border border-rose-500/30 transition shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>مسح وتفريغ التخزين المحلي تماماً 🗑️</span>
+              </button>
             </div>
           </div>
         </div>
