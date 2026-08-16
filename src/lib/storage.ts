@@ -49,232 +49,13 @@ const STORAGE_KEYS = {
   ACTIVE_EMPLOYEE_ID: 'esnad_active_employee_id_v1',
 };
 
-// Seed Data
-const INITIAL_BRANCHES: Branch[] = [
-  {
-    id: 'b1-dokki',
-    name: 'فرع الدقي (الرئيسي)',
-    code: 'BR-DKI',
-    phone: '0233458901',
-    address: 'شارع مصدق، الدقي، الجيزة',
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-    updated_at: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'b2-nasr-city',
-    name: 'فرع مدينة نصر',
-    code: 'BR-NSR',
-    phone: '0222718902',
-    address: 'شارع عباس العقاد، مدينة نصر، القاهرة',
-    is_active: true,
-    created_at: '2026-01-10T08:00:00.000Z',
-    updated_at: '2026-01-10T08:00:00.000Z',
-  },
-  {
-    id: 'b3-alex-smouha',
-    name: 'فرع الإسكندرية (سموحة)',
-    code: 'BR-ALX',
-    phone: '034291803',
-    address: 'ميدان المعهد الديني، سموحة، الإسكندرية',
-    is_active: true,
-    created_at: '2026-02-01T08:00:00.000Z',
-    updated_at: '2026-02-01T08:00:00.000Z',
-  },
-];
-
-const INITIAL_EMPLOYEES: Employee[] = [
-  {
-    id: 'emp-1',
-    name: 'أحمد محمود',
-    code: 'EMP-01',
-    username: 'ahmed.mahmoud',
-    email: 'ahmed@esnad.eg',
-    phone: '01012345678',
-    pin_code: '1234',
-    password: '1234',
-    default_branch_id: 'b1-dokki',
-    role: 'manager',
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'emp-2',
-    name: 'محمد حسان',
-    code: 'EMP-02',
-    username: 'mohamed.hassan',
-    email: 'mohamed@esnad.eg',
-    phone: '01123456789',
-    pin_code: '2233',
-    password: '2233',
-    default_branch_id: 'b2-nasr-city',
-    role: 'employee',
-    is_active: true,
-    created_at: '2026-01-05T08:00:00.000Z',
-  },
-  {
-    id: 'emp-3',
-    name: 'كريم الشناوي',
-    code: 'EMP-03',
-    username: 'karim.elshinawy',
-    email: 'karim@esnad.eg',
-    phone: '01234567890',
-    pin_code: '3344',
-    password: '3344',
-    default_branch_id: 'b1-dokki',
-    role: 'employee',
-    is_active: true,
-    created_at: '2026-01-15T08:00:00.000Z',
-  },
-  {
-    id: 'emp-4',
-    name: 'سارة إبراهيم',
-    code: 'EMP-04',
-    username: 'sara.ibrahim',
-    email: 'sara@esnad.eg',
-    phone: '01543219876',
-    pin_code: '4455',
-    password: '4455',
-    default_branch_id: 'b3-alex-smouha',
-    role: 'employee',
-    is_active: true,
-    created_at: '2026-02-01T08:00:00.000Z',
-  },
-];
-
-const INITIAL_SERVICES: Service[] = [
-  {
-    id: 'srv-national-id',
-    name: 'استخراج بطاقة رقم قومي',
-    category: 'الأحوال المدنية',
-    speeds: [
-      { code: 'normal', label: 'عادي', extra_cost: 0 },
-      { code: 'urgent', label: 'مستعجل', extra_cost: 0 },
-      { code: 'instant', label: 'فوري', extra_cost: 0 },
-      { code: 'super_instant', label: 'VIP / سوبر', extra_cost: 0 },
-    ],
-    fields_config: [
-      { id: 'f1', key: 'profession', label: 'المهنة بالبطاقة', type: 'text', required: true, placeholder: 'مثال: مهندس برمجيات' },
-      { id: 'f2', key: 'marital_status', label: 'الحالة الاجتماعية', type: 'select', options: ['أعزب/آن typewriter', 'متزوج/ة', 'مطلق/ة', 'أرمل/ة'], required: false },
-    ],
-    base_price: 0,
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'srv-passport',
-    name: 'استخراج / تجديد جواز سفر مميكن',
-    category: 'الجوازات والهجرة',
-    speeds: [
-      { code: 'normal', label: 'عادي', extra_cost: 0 },
-      { code: 'urgent', label: 'مستعجل', extra_cost: 0 },
-      { code: 'instant', label: 'فوري', extra_cost: 0 },
-    ],
-    fields_config: [
-      { id: 'p1', key: 'military_status', label: 'الموقف التجنيدي', type: 'select', options: ['معفى نهائياً', 'أدى الخدمة', 'مؤجل', 'غير مطلوب'], required: true },
-      { id: 'p2', key: 'qualification', label: 'المؤهل الدراسي', type: 'text', required: false, placeholder: 'مثال: بكالوريوس تجارة' },
-    ],
-    base_price: 0,
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'srv-birth-cert',
-    name: 'شهادة ميلاد مميكنة (كمبيوتر)',
-    category: 'الأحوال المدنية',
-    speeds: [
-      { code: 'normal', label: 'عادي', extra_cost: 0 },
-      { code: 'instant', label: 'فوري', extra_cost: 0 },
-    ],
-    fields_config: [
-      { id: 'b1', key: 'copies_count', label: 'عدد النسخ المطلوبة', type: 'number', required: true, placeholder: '1' },
-      { id: 'b2', key: 'mother_full_name', label: 'اسم الأم ثلاثي', type: 'text', required: false },
-    ],
-    base_price: 0,
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'srv-death-cert',
-    name: 'شهادة وفاة مميكنة',
-    category: 'الأحوال المدنية',
-    speeds: [
-      { code: 'normal', label: 'عادي', extra_cost: 0 },
-      { code: 'instant', label: 'فوري', extra_cost: 0 },
-    ],
-    fields_config: [
-      { id: 'd1', key: 'deceased_national_id', label: 'الرقم القومي للمتوفى', type: 'text', required: true },
-    ],
-    base_price: 0,
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-  },
-  {
-    id: 'srv-family-record',
-    name: 'قيد عائلي مميكن',
-    category: 'الأحوال المدنية',
-    speeds: [
-      { code: 'normal', label: 'عادي', extra_cost: 0 },
-      { code: 'urgent', label: 'مستعجل', extra_cost: 0 },
-      { code: 'instant', label: 'فوري', extra_cost: 0 },
-    ],
-    fields_config: [
-      { id: 'fr1', key: 'relation_to_applicant', label: 'صلة القرابة', type: 'select', options: ['صاحب الشأن', 'ابن / ابنة', 'زوج / زوجة', 'أب / أم'], required: true },
-    ],
-    base_price: 0,
-    is_active: true,
-    created_at: '2026-01-01T08:00:00.000Z',
-  },
-];
-
-const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  { id: 'exp-cat-1', name: 'إيجار المقر', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-2', name: 'كهرباء ومياه وغاز', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-3', name: 'إنترنت وخطوط تليفون', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-4', name: 'صيانة طابعات وأجهزة', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-5', name: 'مشتريات وأدوات مكتبية وأوراق', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-6', name: 'بوفيه وضيافة', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-7', name: 'مواصلات ومندوبين', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-  { id: 'exp-cat-8', name: 'أخرى ونثريات', is_active: true, created_at: '2026-01-01T08:00:00.000Z' },
-];
-
-const INITIAL_DISTRIBUTORS: Distributor[] = [
-  {
-    id: 'dist-1',
-    name: 'مكتب الأمل للخدمات والاستشارات',
-    phone: '01012345678',
-    code: 'DIS-101',
-    is_active: true,
-    created_at: '2026-01-10T08:00:00.000Z',
-  },
-  {
-    id: 'dist-2',
-    name: 'مركز النور للتسويق والخدمات العامة',
-    phone: '01122334455',
-    code: 'DIS-102',
-    is_active: true,
-    created_at: '2026-01-15T08:00:00.000Z',
-  },
-];
-
-const INITIAL_EXTERNAL_OFFICES: ExternalOffice[] = [
-  {
-    id: 'ext-1',
-    name: 'مكتب المستشار القانوني للترجمة والتوثيق',
-    contact_person: 'أ. سامح عبد الفتاح',
-    phone: '01234567890',
-    is_active: true,
-    created_at: '2026-01-05T08:00:00.000Z',
-  },
-  {
-    id: 'ext-2',
-    name: 'مركز الخدمات المميكنة السريع',
-    contact_person: 'م. وليد الشافعي',
-    phone: '01099887766',
-    is_active: true,
-    created_at: '2026-01-12T08:00:00.000Z',
-  },
-];
+// Empty Default Initializers (Seed Data Removed)
+const INITIAL_BRANCHES: Branch[] = [];
+const INITIAL_EMPLOYEES: Employee[] = [];
+const INITIAL_SERVICES: Service[] = [];
+const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [];
+const INITIAL_DISTRIBUTORS: Distributor[] = [];
+const INITIAL_EXTERNAL_OFFICES: ExternalOffice[] = [];
 
 // Helper functions for reading and writing with JSON
 function load<T>(key: string, defaultValue: T): T {
@@ -304,11 +85,11 @@ export class ResilientStorageService {
   private static instance: ResilientStorageService;
 
   private constructor() {
-    if (typeof window !== 'undefined' && !localStorage.getItem('esnad_auto_reset_zero_balance_v5')) {
+    if (typeof window !== 'undefined' && !localStorage.getItem('esnad_auto_reset_zero_balance_v6')) {
       Object.values(STORAGE_KEYS).forEach(key => {
         localStorage.removeItem(key);
       });
-      localStorage.setItem('esnad_auto_reset_zero_balance_v5', 'true');
+      localStorage.setItem('esnad_auto_reset_zero_balance_v6', 'true');
     }
     this.initializeDefaults();
   }
@@ -322,22 +103,22 @@ export class ResilientStorageService {
 
   private initializeDefaults() {
     if (!localStorage.getItem(STORAGE_KEYS.BRANCHES)) {
-      save(STORAGE_KEYS.BRANCHES, INITIAL_BRANCHES);
+      save(STORAGE_KEYS.BRANCHES, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.EMPLOYEES)) {
-      save(STORAGE_KEYS.EMPLOYEES, INITIAL_EMPLOYEES);
+      save(STORAGE_KEYS.EMPLOYEES, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.SERVICES)) {
-      save(STORAGE_KEYS.SERVICES, INITIAL_SERVICES);
+      save(STORAGE_KEYS.SERVICES, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.EXPENSE_CATEGORIES)) {
-      save(STORAGE_KEYS.EXPENSE_CATEGORIES, INITIAL_EXPENSE_CATEGORIES);
+      save(STORAGE_KEYS.EXPENSE_CATEGORIES, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS)) {
-      save(STORAGE_KEYS.DISTRIBUTORS, INITIAL_DISTRIBUTORS);
+      save(STORAGE_KEYS.DISTRIBUTORS, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.EXTERNAL_OFFICES)) {
-      save(STORAGE_KEYS.EXTERNAL_OFFICES, INITIAL_EXTERNAL_OFFICES);
+      save(STORAGE_KEYS.EXTERNAL_OFFICES, []);
     }
     if (!localStorage.getItem(STORAGE_KEYS.ACTIVE_BRANCH_ID)) {
       save(STORAGE_KEYS.ACTIVE_BRANCH_ID, 'b1-dokki');
