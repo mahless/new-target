@@ -1,0 +1,6 @@
+{
+  "name": "تارجت للخدمات الحكومية",
+  "description": "منظومة تارجت للخدمات الحكومية - تشغيل وإدارة مالية وفنية متكاملة لمكاتب الخدمات الحكومية مع تسعير حر وسرعات تنفيذ مرنة وإغلاق يومي",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
