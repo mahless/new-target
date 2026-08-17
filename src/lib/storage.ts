@@ -81,6 +81,30 @@ function save<T>(key: string, value: T): void {
 }
 
 
+// Helper to format custom string ID deterministically to a valid UUID format
+export function toValidUuid(val: string | null | undefined): string | null {
+  if (!val) return null;
+  const str = String(val).trim();
+  if (!str) return null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  if (isUuid) return str;
+  let hex = '';
+  for (let i = 0; i < str.length; i++) {
+    hex += (str.charCodeAt(i) % 256).toString(16).padStart(2, '0');
+  }
+  hex = (hex + '0'.repeat(32)).slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+// Check if two IDs match directly or through their deterministic UUID conversion
+export function matchIds(id1: string | null | undefined, id2: string | null | undefined): boolean {
+  if (!id1 || !id2) return false;
+  const clean1 = String(id1).trim();
+  const clean2 = String(id2).trim();
+  if (clean1 === clean2) return true;
+  return toValidUuid(clean1) === toValidUuid(clean2);
+}
+
 export class ResilientStorageService {
   private static instance: ResilientStorageService;
 
@@ -183,7 +207,11 @@ export class ResilientStorageService {
 
   // Active Session Selectors
   public getActiveBranchId(): string {
-    return load(STORAGE_KEYS.ACTIVE_BRANCH_ID, 'b1-dokki');
+    const stored = load<string | null>(STORAGE_KEYS.ACTIVE_BRANCH_ID, null);
+    if (stored) return stored;
+    const list = this.getBranches();
+    if (list.length > 0) return list[0].id;
+    return 'b1-dokki';
   }
 
   public setActiveBranchId(branchId: string): void {
@@ -191,7 +219,11 @@ export class ResilientStorageService {
   }
 
   public getActiveEmployeeId(): string {
-    return load(STORAGE_KEYS.ACTIVE_EMPLOYEE_ID, 'emp-1');
+    const stored = load<string | null>(STORAGE_KEYS.ACTIVE_EMPLOYEE_ID, null);
+    if (stored) return stored;
+    const list = this.getEmployees();
+    if (list.length > 0) return list[0].id;
+    return 'emp-1';
   }
 
   public setActiveEmployeeId(employeeId: string): void {
@@ -471,10 +503,10 @@ export class ResilientStorageService {
     const all = load<CashLedgerEntry[]>(STORAGE_KEYS.LEDGER, []);
     let filtered = all;
     if (branchId && branchId !== 'all') {
-      filtered = filtered.filter(l => l.branch_id === branchId);
+      filtered = filtered.filter(l => matchIds(l.branch_id, branchId));
     }
     if (employeeId && employeeId !== 'all') {
-      filtered = filtered.filter(l => l.employee_id === employeeId);
+      filtered = filtered.filter(l => matchIds(l.employee_id, employeeId));
     }
     return filtered;
   }
@@ -529,7 +561,7 @@ export class ResilientStorageService {
   public getOrders(branchId?: string): ServiceOrder[] {
     const orders = load<ServiceOrder[]>(STORAGE_KEYS.ORDERS, []);
     if (!branchId) return orders;
-    return orders.filter(o => o.current_branch_id === branchId || o.creation_branch_id === branchId);
+    return orders.filter(o => matchIds(o.current_branch_id, branchId) || matchIds(o.creation_branch_id, branchId));
   }
 
   public getOrderById(id: string): ServiceOrder | undefined {
@@ -1569,7 +1601,7 @@ export class ResilientStorageService {
 
   // Aggregated KPI Stats
   public getSystemStats(branchId?: string, employeeId?: string): SystemStats {
-    const today = new Date().toISOString().split('T')[0];
+    const localToday = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
     const bId = branchId || this.getActiveBranchId();
     const activeEmpId = employeeId || this.getActiveEmployeeId();
 
@@ -1580,7 +1612,13 @@ export class ResilientStorageService {
     const isEmployeeScoped = Boolean(employeeId && employeeId !== 'all');
 
     const ledger = this.getLedger(bId, isEmployeeScoped ? activeEmpId : undefined);
-    const todayLedger = ledger.filter(l => l.created_at.startsWith(today));
+    const todayLedger = ledger.filter(l => {
+      try {
+        return new Date(l.created_at).toLocaleDateString('en-CA') === localToday;
+      } catch {
+        return l.created_at.split('T')[0] === localToday;
+      }
+    });
 
     const todayCashIn = todayLedger
       .filter(l => l.amount > 0 && l.transaction_type !== 'opening_balance')
@@ -1591,9 +1629,14 @@ export class ResilientStorageService {
       .reduce((sum, l) => sum + Math.abs(Number(l.amount || 0)), 0);
 
     const payments = this.getPayments().filter(p => {
-      const matchBranch = p.branch_id === bId;
-      const matchDate = p.created_at.startsWith(today);
-      const matchEmp = isEmployeeScoped ? p.employee_id === activeEmpId : true;
+      const matchBranch = matchIds(p.branch_id, bId);
+      let matchDate = false;
+      try {
+        matchDate = new Date(p.created_at).toLocaleDateString('en-CA') === localToday;
+      } catch {
+        matchDate = p.created_at.startsWith(localToday);
+      }
+      const matchEmp = isEmployeeScoped ? matchIds(p.employee_id, activeEmpId) : true;
       return matchBranch && matchDate && matchEmp;
     });
     const todayElectronic = payments.reduce((sum, p) => sum + Number(p.electronic_amount || 0), 0);
