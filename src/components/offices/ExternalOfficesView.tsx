@@ -173,13 +173,15 @@ export const ExternalOfficesView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={() => setIsNewOfficeModalOpen(true)}
-          className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition-all"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>إضافة مكتب خارجي</span>
-        </button>
+        {activeEmployee?.role === 'manager' && (
+          <button
+            onClick={() => setIsNewOfficeModalOpen(true)}
+            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition-all"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>إضافة مكتب خارجي</span>
+          </button>
+        )}
       </div>
 
       {/* Ribbon Stats */}

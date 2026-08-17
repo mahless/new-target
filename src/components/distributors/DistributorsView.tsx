@@ -171,15 +171,17 @@ export const DistributorsView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsNewDistributorModalOpen(true)}
-            className="flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition-all"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>إضافة موزع جديد</span>
-          </button>
-        </div>
+        {activeEmployee?.role === 'manager' && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsNewDistributorModalOpen(true)}
+              className="flex items-center gap-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl text-xs shadow-md transition-all"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>إضافة موزع جديد</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Ribbon Stats */}
