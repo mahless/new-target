@@ -235,7 +235,22 @@ export const ExpensesView: React.FC = () => {
                 filteredExpenses.map(exp => {
                   const branch = branches.find(b => matchIds(b.id, exp.branch_id));
                   const employee = employees.find(e => matchIds(e.id, exp.employee_id));
-                  const relatedOrder = orders.find(o => matchIds(o.id, exp.related_order_id));
+
+                  // Resolve linked order by ID, receipt number, or notes text search
+                  let relatedOrder = orders.find(o => matchIds(o.id, exp.related_order_id));
+                  if (!relatedOrder && exp.receipt_number) {
+                    relatedOrder = orders.find(o => o.order_number === exp.receipt_number || matchIds(o.id, exp.receipt_number));
+                  }
+                  if (!relatedOrder) {
+                    const fullText = `${exp.notes || ''} ${exp.category_name || ''} ${exp.receipt_number || ''}`;
+                    if (fullText.trim()) {
+                      relatedOrder = orders.find(o => o.order_number && fullText.includes(o.order_number));
+                    }
+                  }
+
+                  // Fallback: Extract order number digits pattern from text if order object not loaded
+                  const textMatch = (!relatedOrder ? `${exp.notes || ''} ${exp.category_name || ''}` : '').match(/#?(\d{3,})/);
+                  const fallbackOrderNum = textMatch ? textMatch[1] : null;
 
                   return (
                     <tr key={exp.id} className="hover:bg-slate-800/40 transition-colors">
@@ -262,6 +277,18 @@ export const ExpensesView: React.FC = () => {
                               {new Date(relatedOrder.created_at).toLocaleDateString('ar-EG-u-nu-latn')}{' '}
                               <span className="text-slate-500">
                                 {new Date(relatedOrder.created_at).toLocaleTimeString('ar-EG-u-nu-latn')}
+                              </span>
+                            </span>
+                          </div>
+                        ) : fallbackOrderNum ? (
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-amber-400 block text-xs font-mono">
+                              #{fallbackOrderNum}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block font-mono">
+                              {new Date(exp.created_at).toLocaleDateString('ar-EG-u-nu-latn')}{' '}
+                              <span className="text-slate-500">
+                                {new Date(exp.created_at).toLocaleTimeString('ar-EG-u-nu-latn')}
                               </span>
                             </span>
                           </div>

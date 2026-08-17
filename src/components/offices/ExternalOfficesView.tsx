@@ -129,9 +129,13 @@ export const ExternalOfficesView: React.FC = () => {
       setIsSubmitting(true);
       const idempotencyKey = generateIdempotencyKey('off-payout');
 
+      const officeTxns = storage.getExternalOfficeTransactions(targetOfficeForPayout.id);
+      const pendingOrderTxn = officeTxns.find(t => t.type === 'service_order_cost' && t.reference_id);
+
       storage.recordExternalOfficePayment({
         officeId: targetOfficeForPayout.id,
         amount: numAmount,
+        relatedOrderId: pendingOrderTxn?.reference_id,
         notes: payoutNotes.trim() || undefined,
         idempotencyKey,
         branchId: activeBranch?.id,
