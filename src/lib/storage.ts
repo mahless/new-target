@@ -1489,7 +1489,7 @@ export class ResilientStorageService {
       branch_id: branchId,
       employee_id: employeeId,
       category_id: null,
-      category_name: 'تكلفة مكتب خارجي',
+      category_name: paymentNote,
       amount,
       external_office_id: office.id,
       notes: paymentNote,

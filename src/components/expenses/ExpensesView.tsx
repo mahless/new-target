@@ -245,10 +245,10 @@ export const ExpensesView: React.FC = () => {
                       <td className="py-3.5 px-4 font-bold text-slate-300">{branch?.name}</td>
                       <td className="py-3.5 px-4">
                         <span className="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[11px] font-bold">
-                          {categoriesMap[exp.category] || exp.category}
+                          {exp.category_name || categoriesMap[exp.category] || exp.category}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-200 font-medium">{exp.description}</td>
+                      <td className="py-3.5 px-4 text-slate-200 font-medium">{exp.description || exp.notes}</td>
                       <td className="py-3.5 px-4 font-mono text-slate-400">
                         {exp.receipt_number || '-'}
                       </td>
