@@ -732,32 +732,14 @@ export class ResilientStorageService {
       );
     }
 
-    // 8. Handle External Office Cost (Accrued Payable - No Auto Cash Deduction)
+    // 8. Handle External Office Cost (Accrued Liability - Recorded on Office Statement, No Expense or Cash Deduction yet)
     if (params.externalOfficeId && extOfficeCost > 0) {
       const offices = this.getExternalOffices();
       const office = offices.find(o => o.id === params.externalOfficeId);
       const officeName = office ? office.name : 'مكتب خارجي';
       const officeNotes = `مستحق ل ${officeName} ${orderNumber}`;
 
-      // A) Record expense entry for reporting (without deducting drawer cash)
-      const expEntry: Expense = {
-        id: `exp-${timestamp}`,
-        branch_id: branchId,
-        employee_id: employeeId,
-        category_id: null,
-        category_name: 'تكلفة مكتب خارجي (مستحقات معلقة)',
-        amount: extOfficeCost,
-        related_order_id: order.id,
-        external_office_id: params.externalOfficeId,
-        notes: officeNotes,
-        idempotency_key: `ext-exp-${params.idempotencyKey}`,
-        created_at: now,
-      };
-      const allExpenses = load<Expense[]>(STORAGE_KEYS.EXPENSES, []);
-      allExpenses.unshift(expEntry);
-      save(STORAGE_KEYS.EXPENSES, allExpenses);
-
-      // B) Record external office credit transaction & update office payable balance
+      // Record external office credit transaction & update office payable balance (No expense or cash deduction until manual payment)
       if (office) {
         const txns = this.getExternalOfficeTransactions();
         const newBalance = Number(((office.balance || 0) + extOfficeCost).toFixed(2));
@@ -1487,6 +1469,8 @@ export class ResilientStorageService {
     const office = offices.find(o => matchIds(o.id, params.officeId));
     if (!office) throw new Error('المكتب الخارجي غير موجود في النظام');
 
+    const paymentNote = params.notes?.trim() || `مستحق ل ${office.name}`;
+
     // 1. Deduct from Drawer (expense ledger)
     this.appendLedgerEntry(
       branchId,
@@ -1494,10 +1478,27 @@ export class ResilientStorageService {
       -amount,
       'external_offices',
       office.id,
-      params.notes || `سداد مستحقات للمكتب الخارجي ${office.name}`,
+      paymentNote,
       `ldg-ext-${params.idempotencyKey}`,
       employeeId
     );
+
+    // 2. Record Expense entry so it appears under Expenses View ONLY after manual payment
+    const expEntry: Expense = {
+      id: `exp-${Date.now()}`,
+      branch_id: branchId,
+      employee_id: employeeId,
+      category_id: null,
+      category_name: 'تكلفة مكتب خارجي',
+      amount,
+      external_office_id: office.id,
+      notes: paymentNote,
+      idempotency_key: `ext-pay-exp-${params.idempotencyKey}`,
+      created_at: new Date().toISOString(),
+    };
+    const expenses = load<Expense[]>(STORAGE_KEYS.EXPENSES, []);
+    expenses.unshift(expEntry);
+    save(STORAGE_KEYS.EXPENSES, expenses);
 
     const txns = this.getExternalOfficeTransactions();
     const currentBalance = (office.balance || 0) - amount;
@@ -1509,7 +1510,7 @@ export class ResilientStorageService {
       employee_id: employeeId,
       amount: -amount,
       type: 'office_payout',
-      notes: params.notes,
+      notes: paymentNote,
       idempotency_key: params.idempotencyKey,
       balance_after: currentBalance,
       created_at: new Date().toISOString(),
