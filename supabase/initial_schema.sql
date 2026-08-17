@@ -348,7 +348,8 @@ CREATE TABLE IF NOT EXISTS daily_closings (
     closing_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_daily_closings_type CHECK (closing_type IN ('carry_over', 'payout_to_main'))
+    CONSTRAINT chk_daily_closings_type CHECK (closing_type IN ('carry_over', 'payout_to_main')),
+    CONSTRAINT uq_daily_closings_branch_date UNIQUE (branch_id, closing_date)
 );
 
 -- ==============================================================================
