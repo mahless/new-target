@@ -1,7 +1,7 @@
 -- ==============================================================================
 -- منظومة إسناد المتكاملة لإدارة الخدمات الحكومية والتوثيقية | Esnad Multi-Branch System
 -- Production PostgreSQL Database Schema for Supabase
--- Source of Truth: Application Codebase & Business Logic (src/lib/storage.ts & types)
+-- Source of Truth: Application Codebase & Business Logic (src/lib/storage.ts, types, & components)
 -- ==============================================================================
 
 -- ------------------------------------------------------------------------------
@@ -38,63 +38,60 @@ CREATE TABLE IF NOT EXISTS branches (
 CREATE TABLE IF NOT EXISTS employees (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
-    code TEXT UNIQUE NOT NULL,
-    username TEXT UNIQUE NOT NULL,
+    code TEXT UNIQUE,
+    username TEXT UNIQUE,
     email TEXT,
     phone TEXT,
-    pin_code TEXT NOT NULL,
-    password_hash TEXT,
+    pin_code TEXT,
+    password TEXT,
     branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
     default_branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
-    role TEXT NOT NULL DEFAULT 'employee' CHECK (role IN ('manager', 'employee', 'viewer')),
+    role TEXT NOT NULL DEFAULT 'employee',
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_employees_name_not_empty CHECK (length(trim(name)) > 0),
-    CONSTRAINT chk_employees_username_not_empty CHECK (length(trim(username)) > 0),
-    CONSTRAINT chk_employees_pin_length CHECK (length(trim(pin_code)) >= 4)
+    CONSTRAINT chk_employees_role CHECK (role IN ('manager', 'employee', 'viewer')),
+    CONSTRAINT chk_employees_name_not_empty CHECK (length(trim(name)) > 0)
 );
 
 -- ==============================================================================
--- Table: services (كتالوج الخدمات الحكومية)
--- Description: الخدمات وسرعات التنفيذ (عادي، مستعجل، فوري...) وحقول الإدخال المخصصة
+-- Table: services (دليل الخدمات الحكومية والتسعير)
+-- Description: قائمة الخدمات والسرعات المتاحة (عادي، مستعجل، فوري، سوبر فوري)
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS services (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
-    category TEXT NOT NULL DEFAULT '',
-    base_price NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    execution_days INTEGER NOT NULL DEFAULT 1,
+    category TEXT,
     speeds JSONB NOT NULL DEFAULT '[]'::jsonb,
     fields_config JSONB NOT NULL DEFAULT '[]'::jsonb,
+    base_price NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    execution_days INTEGER DEFAULT 1,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_services_name_not_empty CHECK (length(trim(name)) > 0),
-    CONSTRAINT chk_services_base_price_positive CHECK (base_price >= 0.00),
-    CONSTRAINT chk_services_execution_days CHECK (execution_days >= 0)
+    CONSTRAINT chk_services_base_price_non_negative CHECK (base_price >= 0),
+    CONSTRAINT chk_services_days_non_negative CHECK (execution_days >= 0),
+    CONSTRAINT chk_services_name_not_empty CHECK (length(trim(name)) > 0)
 );
 
 -- ==============================================================================
--- Table: customers (سجل العملاء)
--- Description: بيانات العملاء المسجلين والبحث بالرقم القومي أو الهاتف
+-- Table: customers (دليل العملاء)
+-- Description: بيانات طالبي الخدمات وحصر إجمالي معاملاتهم
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS customers (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     name TEXT NOT NULL,
     phone TEXT NOT NULL,
-    national_id VARCHAR(14),
+    national_id TEXT,
     total_orders INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_customers_total_orders_non_negative CHECK (total_orders >= 0),
     CONSTRAINT chk_customers_name_not_empty CHECK (length(trim(name)) > 0),
-    CONSTRAINT chk_customers_phone_not_empty CHECK (length(trim(phone)) > 0),
-    CONSTRAINT chk_customers_total_orders CHECK (total_orders >= 0)
+    CONSTRAINT chk_customers_phone_not_empty CHECK (length(trim(phone)) > 0)
 );
 
 -- ==============================================================================
--- Table: distributors (الموزعون والوسطاء الخارجيون)
--- Description: الموزعون الذين تصدر لهم معاملات بالآجل ويقومون بتوريد مبالغ نقدية
+-- Table: distributors (الموزعون والوسطاء)
+-- Description: الموزعون الخارجيون الذين يجلبون المعاملات وحساباتهم الآجلة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS distributors (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -103,15 +100,21 @@ CREATE TABLE IF NOT EXISTS distributors (
     code TEXT UNIQUE NOT NULL,
     address TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    balance NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    total_orders_value NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    total_supplied NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    balance_due NUMERIC(12,2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_distributors_orders_val_non_negative CHECK (total_orders_value >= 0),
+    CONSTRAINT chk_distributors_total_supplied_non_negative CHECK (total_supplied >= 0),
     CONSTRAINT chk_distributors_name_not_empty CHECK (length(trim(name)) > 0),
     CONSTRAINT chk_distributors_code_not_empty CHECK (length(trim(code)) > 0)
 );
 
 -- ==============================================================================
--- Table: external_offices (المكاتب الخارجية المعاونة)
--- Description: مكاتب الترجمة والتوثيق والتنفيذ الخارجي ذات التكلفة المحددة
+-- Table: external_offices (المكاتب الخارجية المنفذة)
+-- Description: المكاتب والشركاء الذين يتم إسناد المعاملات إليهم لتنفيذها
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS external_offices (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -121,157 +124,168 @@ CREATE TABLE IF NOT EXISTS external_offices (
     specialty TEXT,
     address TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
+    balance NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    total_jobs_count INTEGER NOT NULL DEFAULT 0,
+    total_cost_paid NUMERIC(12,2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_ext_offices_jobs_count_non_negative CHECK (total_jobs_count >= 0),
+    CONSTRAINT chk_ext_offices_cost_paid_non_negative CHECK (total_cost_paid >= 0),
     CONSTRAINT chk_ext_offices_name_not_empty CHECK (length(trim(name)) > 0)
 );
 
 -- ==============================================================================
--- Table: expense_categories (بنود وتصنيفات المصروفات)
--- Description: بنود الصرف التشغيلي (إيجار، كهرباء، صيانة، نثريات...)
+-- Table: expense_categories (تصنيفات المصروفات)
+-- Description: شجرة وبنود المصروفات التشغيلية والعمومية
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS expense_categories (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    name TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_expense_cats_name_not_empty CHECK (length(trim(name)) > 0)
+    CONSTRAINT chk_exp_categories_name_not_empty CHECK (length(trim(name)) > 0)
 );
 
 -- ==============================================================================
--- Table: service_orders (أوامر العمليات والتشغيل)
--- Description: المعاملات الرئيسية متضمنة التفاصيل المالية، الموزع، والمكتب الخارجي
+-- Table: service_orders (أوامر الخدمات والمعاملات)
+-- Description: الجسد الرئيسي للمعاملات مع ربط الفروع، التسعير، الدفعات، والهامش
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS service_orders (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     order_number TEXT UNIQUE NOT NULL,
-    customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    customer_id TEXT REFERENCES customers(id) ON DELETE RESTRICT,
     customer_name TEXT NOT NULL,
     customer_phone TEXT NOT NULL,
-    customer_national_id VARCHAR(14),
-    service_id TEXT NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
+    customer_national_id TEXT,
+    service_id TEXT REFERENCES services(id) ON DELETE RESTRICT,
     service_name TEXT NOT NULL,
-    speed TEXT NOT NULL DEFAULT 'normal',
+    speed TEXT NOT NULL DEFAULT 'عادي',
     form_barcode TEXT,
-    form_source TEXT CHECK (form_source IN ('internal', 'external')),
+    form_source TEXT DEFAULT 'internal',
     custom_fields_data JSONB NOT NULL DEFAULT '{}'::jsonb,
     notes TEXT,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'delivered', 'cancelled')),
-    price NUMERIC(12, 2) NOT NULL,
-    total_paid NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    remaining NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    status TEXT NOT NULL DEFAULT 'pending',
+    price NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    total_paid NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    remaining NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    cash_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    electronic_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
     distributor_id TEXT REFERENCES distributors(id) ON DELETE SET NULL,
     external_office_id TEXT REFERENCES external_offices(id) ON DELETE SET NULL,
-    external_office_cost NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    office_margin NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    external_office_cost NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    office_margin NUMERIC(12,2) NOT NULL DEFAULT 0.00,
     creation_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     current_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     delivery_branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
-    created_by_employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
-    idempotency_key TEXT UNIQUE NOT NULL,
+    created_by_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    idempotency_key TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_orders_price_positive CHECK (price >= 0.00),
-    CONSTRAINT chk_orders_paid_bounds CHECK (total_paid >= 0.00 AND total_paid <= price),
-    CONSTRAINT chk_orders_remaining_math CHECK (remaining = round((price - total_paid)::numeric, 2)),
-    CONSTRAINT chk_orders_ext_office_cost CHECK (external_office_cost >= 0.00),
-    CONSTRAINT chk_orders_margin_math CHECK (office_margin = round((price - external_office_cost)::numeric, 2))
+    CONSTRAINT chk_orders_form_source CHECK (form_source IN ('internal', 'external')),
+    CONSTRAINT chk_orders_status CHECK (status IN ('pending', 'in_progress', 'completed', 'delivered', 'cancelled')),
+    CONSTRAINT chk_orders_price_non_negative CHECK (price >= 0),
+    CONSTRAINT chk_orders_total_paid_non_negative CHECK (total_paid >= 0),
+    CONSTRAINT chk_orders_remaining_non_negative CHECK (remaining >= 0),
+    CONSTRAINT chk_orders_cash_amount_non_negative CHECK (cash_amount >= 0),
+    CONSTRAINT chk_orders_electronic_amount_non_negative CHECK (electronic_amount >= 0),
+    CONSTRAINT chk_orders_ext_office_cost_non_negative CHECK (external_office_cost >= 0),
+    CONSTRAINT chk_orders_order_number_not_empty CHECK (length(trim(order_number)) > 0)
 );
 
 -- ==============================================================================
--- Table: payments (سجل الدفعات والتحصيلات النقدية والإلكترونية)
--- Description: سداد الدفعات الأولى والمتبقي مقسمة بين كاش وإلكتروني (محفظة، إنستاباي، نقاط بيع)
+-- Table: payments (سجل الدفعات المستقلة)
+-- Description: الدفعات النقدية والإلكترونية الجزئية أو الإجمالية لكل معاملة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS payments (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     order_id TEXT NOT NULL REFERENCES service_orders(id) ON DELETE CASCADE,
     branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
-    amount NUMERIC(12, 2) NOT NULL,
-    cash_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    electronic_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    electronic_type TEXT CHECK (electronic_type IN ('wallet', 'instapay', 'pos') OR electronic_type IS NULL),
+    amount NUMERIC(12,2) NOT NULL,
+    cash_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    electronic_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    electronic_type TEXT,
     notes TEXT,
-    idempotency_key TEXT UNIQUE NOT NULL,
+    idempotency_key TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_payments_amount_positive CHECK (amount > 0.00),
-    CONSTRAINT chk_payments_cash_positive CHECK (cash_amount >= 0.00),
-    CONSTRAINT chk_payments_electronic_positive CHECK (electronic_amount >= 0.00),
-    CONSTRAINT chk_payments_sum_split CHECK (amount = round((cash_amount + electronic_amount)::numeric, 2))
+    CONSTRAINT chk_payments_amount_positive CHECK (amount > 0),
+    CONSTRAINT chk_payments_cash_non_negative CHECK (cash_amount >= 0),
+    CONSTRAINT chk_payments_electronic_non_negative CHECK (electronic_amount >= 0),
+    CONSTRAINT chk_payments_electronic_type CHECK (electronic_type IN ('wallet', 'instapay', 'pos') OR electronic_type IS NULL)
 );
 
 -- ==============================================================================
--- Table: cash_ledger (دفتر الأستاذ المالي الملحق بالخزنة النقدية - Append-Only)
--- Description: سجل التدفقات النقدية غير القابل للتعديل لعهدة الموظف وخزينة الفرع
+-- Table: cash_ledger (دفتر الأستاذ المالي للدرج الخزني)
+-- Description: القيود المالية الدقيقة المؤثرة على رصيد الكاش النقدي لكل فرع
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS cash_ledger (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
-    transaction_type TEXT NOT NULL CHECK (
-        transaction_type IN (
-            'customer_cash_payment',
-            'distributor_payment',
-            'distributor_supply',
-            'expense',
-            'external_office_cost',
-            'external_office_payment',
-            'branch_transfer_in',
-            'branch_transfer_out',
-            'correction',
-            'opening_balance',
-            'daily_closing_payout'
-        )
-    ),
-    amount NUMERIC(12, 2) NOT NULL, -- موجب للمقبوضات، سالب للمصروفات والتحويلات الخارجة
-    balance_after NUMERIC(12, 2) NOT NULL,
+    transaction_type TEXT NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
+    balance_after NUMERIC(12,2) NOT NULL,
     reference_table TEXT,
     reference_id TEXT,
+    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     idempotency_key TEXT UNIQUE,
     notes TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_ledger_type CHECK (transaction_type IN (
+        'customer_cash_payment',
+        'distributor_payment',
+        'distributor_supply',
+        'expense',
+        'external_office_cost',
+        'external_office_payment',
+        'branch_transfer_in',
+        'branch_transfer_out',
+        'correction',
+        'opening_balance',
+        'daily_closing_payout'
+    ))
 );
 
 -- ==============================================================================
--- Table: distributor_transactions (حركات حسابات ومديونيات الموزعين)
--- Description: قيد المديونية عند تسجيل طلب بالآجل أو السداد والتوريد النقدي
+-- Table: distributor_transactions (حركات حسابات الموزعين)
+-- Description: قيود المديونية والتوريدات المالية الخاصة بالموزعين
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS distributor_transactions (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     distributor_id TEXT NOT NULL REFERENCES distributors(id) ON DELETE CASCADE,
     branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
     employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
-    amount NUMERIC(12, 2) NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('order_charge', 'supply_payment', 'opening_balance')),
+    amount NUMERIC(12,2) NOT NULL,
+    type TEXT NOT NULL,
     reference_id TEXT,
     idempotency_key TEXT UNIQUE,
     notes TEXT,
-    balance_after NUMERIC(12, 2),
+    balance_after NUMERIC(12,2),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_dist_txns_amount_positive CHECK (amount > 0.00)
+    CONSTRAINT chk_distributor_txns_type CHECK (type IN ('order_charge', 'supply_payment', 'opening_balance'))
 );
 
 -- ==============================================================================
--- Table: external_office_transactions (حركات وسدادات المكاتب الخارجية)
--- Description: تتبع مستحقات مكاتب التنفيذ وسداد الدفعات لهم من الخزينة
+-- Table: external_office_transactions (حركات حسابات المكاتب الخارجية)
+-- Description: مستحقات وصرف مستحقات المكاتب الخارجية المنفذة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS external_office_transactions (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     external_office_id TEXT NOT NULL REFERENCES external_offices(id) ON DELETE CASCADE,
     branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
     employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
-    amount NUMERIC(12, 2) NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('service_order_cost', 'office_payout', 'opening_balance')),
+    amount NUMERIC(12,2) NOT NULL,
+    type TEXT NOT NULL,
     reference_id TEXT,
     idempotency_key TEXT UNIQUE,
     notes TEXT,
-    balance_after NUMERIC(12, 2),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    balance_after NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_ext_office_txns_type CHECK (type IN ('service_order_cost', 'office_payout', 'opening_balance'))
 );
 
 -- ==============================================================================
--- Table: expenses (المصروفات النقدية للفرع)
--- Description: المصروفات المباشرة المخصومة من الخزينة النقدية للفرع
+-- Table: expenses (المصروفات التشغيلية)
+-- Description: سندات صرف النثريات والمصروفات المخصومة من خزينة الفرع
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS expenses (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -279,68 +293,67 @@ CREATE TABLE IF NOT EXISTS expenses (
     employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
     category_id TEXT REFERENCES expense_categories(id) ON DELETE SET NULL,
     category_name TEXT NOT NULL,
-    amount NUMERIC(12, 2) NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
     related_order_id TEXT REFERENCES service_orders(id) ON DELETE SET NULL,
     external_office_id TEXT REFERENCES external_offices(id) ON DELETE SET NULL,
     notes TEXT,
-    idempotency_key TEXT UNIQUE NOT NULL,
+    idempotency_key TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_expenses_amount_positive CHECK (amount > 0.00)
+    CONSTRAINT chk_expenses_amount_positive CHECK (amount > 0)
 );
 
 -- ==============================================================================
--- Table: branch_transfers (التحويلات النقدية بين الفروع)
--- Description: تحويل النقد بين الفروع بحالة (pending, completed, rejected)
+-- Table: branch_transfers (تحويلات النقدية بين الفروع)
+-- Description: طلبات وسندات نقل وتوريد الأموال بين الفروع المختلفة
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS branch_transfers (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    reference_number TEXT UNIQUE NOT NULL,
+    reference_number TEXT UNIQUE,
     from_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     to_branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
-    amount NUMERIC(12, 2) NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
     sender_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     receiver_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'rejected')),
+    employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
     notes TEXT,
-    idempotency_key TEXT UNIQUE NOT NULL,
+    idempotency_key TEXT UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chk_transfers_amount_positive CHECK (amount > 0.00),
-    CONSTRAINT chk_transfers_different_branches CHECK (from_branch_id <> to_branch_id)
+    CONSTRAINT chk_transfers_amount_positive CHECK (amount > 0),
+    CONSTRAINT chk_transfers_status CHECK (status IN ('pending', 'completed', 'rejected')),
+    CONSTRAINT chk_transfers_diff_branches CHECK (from_branch_id <> to_branch_id)
 );
 
 -- ==============================================================================
--- Table: daily_closings (الإغلاق والتسوية اليومية للخزينة)
--- Description: تسوية الرصيد الدفتري مع الجرد الفعلي، مع منع التكرار لليوم الواحد
+-- Table: daily_closings (سجل وتقارير التقفيل والإغلاق اليومي)
+-- Description: جرد الخزينة اليومي المقارن بين الرصيد المحسوب والرصيد الفعلي
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS daily_closings (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     branch_id TEXT NOT NULL REFERENCES branches(id) ON DELETE RESTRICT,
     closing_date DATE NOT NULL,
-    opening_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    system_calculated_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    actual_cash_count NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    difference NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    closing_type TEXT NOT NULL DEFAULT 'carry_over' CHECK (closing_type IN ('carry_over', 'payout_to_main')),
-    total_cash_in NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    total_cash_out NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    total_electronic NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    net_cash_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
-    total_orders_count INTEGER NOT NULL DEFAULT 0,
-    total_expenses_count INTEGER NOT NULL DEFAULT 0,
+    opening_balance NUMERIC(12,2) DEFAULT 0.00,
+    system_calculated_balance NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    actual_cash_count NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    difference NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    closing_type TEXT NOT NULL DEFAULT 'carry_over',
+    total_cash_in NUMERIC(12,2) DEFAULT 0.00,
+    total_cash_out NUMERIC(12,2) DEFAULT 0.00,
+    total_electronic NUMERIC(12,2) DEFAULT 0.00,
+    net_cash_balance NUMERIC(12,2) DEFAULT 0.00,
+    total_orders_count INTEGER DEFAULT 0,
+    total_expenses_count INTEGER DEFAULT 0,
     employee_name TEXT,
-    closing_employee_id TEXT NOT NULL REFERENCES employees(id) ON DELETE RESTRICT,
+    closing_employee_id TEXT REFERENCES employees(id) ON DELETE SET NULL,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT uq_branch_closing_date UNIQUE (branch_id, closing_date),
-    CONSTRAINT chk_closings_actual_cash_positive CHECK (actual_cash_count >= 0.00),
-    CONSTRAINT chk_closings_orders_count CHECK (total_orders_count >= 0),
-    CONSTRAINT chk_closings_expenses_count CHECK (total_expenses_count >= 0)
+    CONSTRAINT chk_daily_closings_type CHECK (closing_type IN ('carry_over', 'payout_to_main'))
 );
 
 -- ==============================================================================
--- Table: audit_logs (سجل التتبع والرقابة الشامل - Audit Trail)
--- Description: تسجيل كافة العمليات، التعديلات، وبيانات قبل وبعد التغيير
+-- Table: audit_logs (سجل التتبع والمراقبة الأمنية)
+-- Description: تتبع كافة عمليات الإضافة والتعديل والتغيير الإجرائي
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -348,7 +361,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     employee_name TEXT NOT NULL,
     branch_id TEXT REFERENCES branches(id) ON DELETE SET NULL,
     action TEXT NOT NULL,
-    entity TEXT NOT NULL,
+    entity TEXT,
     entity_name TEXT,
     entity_id TEXT,
     old_data JSONB,
@@ -359,89 +372,50 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- ==============================================================================
--- Table: idempotency_keys (سجل مفاتيح عدم التكرار للعمليات المتزامنة)
--- Description: حماية العمليات المالية والتسجيل من التكرار والـ Race Conditions
+-- Table: idempotency_keys (سجل منع تكرار المعاملات المالية)
+-- Description: تخزين استجابات Idempotency لمنع المعاملات المزدوجة والـ Race Conditions
 -- ==============================================================================
 CREATE TABLE IF NOT EXISTS idempotency_keys (
-    key TEXT PRIMARY KEY,
-    resource_type TEXT NOT NULL,
-    resource_id TEXT,
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    key TEXT UNIQUE NOT NULL,
+    endpoint TEXT,
     response_payload JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '24 hours')
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ------------------------------------------------------------------------------
--- 3. INDEXES (الاستعلامات السريعة، الفلترة، والبحث عالي الكثافة)
+-- 3. INDEXES FOR PERFORMANCE OPTIMIZATION
 -- ------------------------------------------------------------------------------
-
--- Customers Indexes
-CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-CREATE INDEX IF NOT EXISTS idx_customers_national_id ON customers(national_id) WHERE national_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
 
 -- Service Orders Indexes
-CREATE INDEX IF NOT EXISTS idx_orders_order_number ON service_orders(order_number);
-CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON service_orders(customer_id);
-CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON service_orders(customer_phone);
-CREATE INDEX IF NOT EXISTS idx_orders_customer_national_id ON service_orders(customer_national_id) WHERE customer_national_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_orders_service_id ON service_orders(service_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON service_orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_current_branch_status ON service_orders(current_branch_id, status);
-CREATE INDEX IF NOT EXISTS idx_orders_creation_branch ON service_orders(creation_branch_id);
-CREATE INDEX IF NOT EXISTS idx_orders_distributor_id ON service_orders(distributor_id) WHERE distributor_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_orders_external_office_id ON service_orders(external_office_id) WHERE external_office_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_orders_created_by ON service_orders(created_by_employee_id);
-CREATE INDEX IF NOT EXISTS idx_orders_created_at ON service_orders(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_orders_remaining ON service_orders(remaining) WHERE remaining > 0;
-
--- Unique Barcode Index (Only when barcode is present)
-CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_form_barcode ON service_orders(form_barcode)
-    WHERE form_barcode IS NOT NULL AND form_barcode <> '';
+CREATE INDEX IF NOT EXISTS idx_orders_order_number ON service_orders (order_number);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_lookup ON service_orders (customer_id, customer_phone, customer_national_id);
+CREATE INDEX IF NOT EXISTS idx_orders_barcode ON service_orders (form_barcode);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON service_orders (status);
+CREATE INDEX IF NOT EXISTS idx_orders_branches ON service_orders (current_branch_id, creation_branch_id);
+CREATE INDEX IF NOT EXISTS idx_orders_distributor ON service_orders (distributor_id);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON service_orders (created_at DESC);
 
 -- Payments Indexes
-CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
-CREATE INDEX IF NOT EXISTS idx_payments_branch_created ON payments(branch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_payments_employee_created ON payments(employee_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payments_order ON payments (order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_branch ON payments (branch_id);
+CREATE INDEX IF NOT EXISTS idx_payments_created ON payments (created_at DESC);
 
 -- Cash Ledger Indexes
-CREATE INDEX IF NOT EXISTS idx_ledger_branch_date ON cash_ledger(branch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ledger_employee_date ON cash_ledger(employee_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ledger_branch_emp_date ON cash_ledger(branch_id, employee_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ledger_tx_type ON cash_ledger(transaction_type);
+CREATE INDEX IF NOT EXISTS idx_ledger_branch_created ON cash_ledger (branch_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ledger_type ON cash_ledger (transaction_type);
 
--- Expenses Indexes
-CREATE INDEX IF NOT EXISTS idx_expenses_branch_date ON expenses(branch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_expenses_employee_date ON expenses(employee_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_expenses_category_id ON expenses(category_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_order_id ON expenses(related_order_id) WHERE related_order_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_expenses_ext_office ON expenses(external_office_id) WHERE external_office_id IS NOT NULL;
-
--- Branch Transfers Indexes
-CREATE INDEX IF NOT EXISTS idx_transfers_from_branch ON branch_transfers(from_branch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_transfers_to_branch ON branch_transfers(to_branch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_transfers_status ON branch_transfers(status);
-
--- Distributor & External Office Transactions Indexes
-CREATE INDEX IF NOT EXISTS idx_dist_txns_dist_id ON distributor_transactions(distributor_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ext_office_txns_id ON external_office_transactions(external_office_id, created_at DESC);
-
--- Daily Closings Indexes
-CREATE INDEX IF NOT EXISTS idx_closings_branch_date ON daily_closings(branch_id, closing_date DESC);
-CREATE INDEX IF NOT EXISTS idx_closings_employee ON daily_closings(closing_employee_id);
-
--- Audit Logs Indexes
-CREATE INDEX IF NOT EXISTS idx_audit_created_at ON audit_logs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_branch ON audit_logs(branch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_employee ON audit_logs(employee_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity, entity_id);
-
--- Idempotency Keys Cleanup Index
-CREATE INDEX IF NOT EXISTS idx_idempotency_expires ON idempotency_keys(expires_at);
+-- Financial Transactions Indexes
+CREATE INDEX IF NOT EXISTS idx_dist_txns_distributor ON distributor_transactions (distributor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ext_office_txns_office ON external_office_transactions (external_office_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_branch ON expenses (branch_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_closings_branch_date ON daily_closings (branch_id, closing_date DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs (entity, entity_id);
 
 -- ------------------------------------------------------------------------------
--- 4. AUTOMATIC TIMESTAMP UPDATE TRIGGER FUNCTION
+-- 4. AUTOMATIC TIMESTAMPS TRIGGERS
 -- ------------------------------------------------------------------------------
+
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -450,22 +424,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply Triggers
 DROP TRIGGER IF EXISTS trg_branches_updated_at ON branches;
 CREATE TRIGGER trg_branches_updated_at
     BEFORE UPDATE ON branches
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_employees_updated_at ON employees;
-CREATE TRIGGER trg_employees_updated_at
-    BEFORE UPDATE ON employees
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_services_updated_at ON services;
-CREATE TRIGGER trg_services_updated_at
-    BEFORE UPDATE ON services
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -500,10 +461,10 @@ CREATE TRIGGER trg_transfers_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- ------------------------------------------------------------------------------
--- 5. ROW LEVEL SECURITY (RLS) & ACCESS POLICIES
+-- 5. ROW LEVEL SECURITY (RLS) & PERMISSIVE ACCESS POLICIES
 -- ------------------------------------------------------------------------------
 
--- Disable RLS or create permissive policies to allow public/anon client access
+-- Enable RLS for security architecture
 ALTER TABLE branches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
@@ -522,7 +483,7 @@ ALTER TABLE daily_closings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE idempotency_keys ENABLE ROW LEVEL SECURITY;
 
--- Permissive policies for anon / authenticated roles
+-- Permissive client policies for anon and authenticated roles
 DO $$
 BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Allow_all_branches" ON branches';
@@ -577,3 +538,14 @@ BEGIN
     EXECUTE 'CREATE POLICY "Allow_all_idempotency_keys" ON idempotency_keys FOR ALL USING (true) WITH CHECK (true)';
 END $$;
 
+-- ------------------------------------------------------------------------------
+-- 6. REALTIME LIVE STREAMING PUBLICATION
+-- ------------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE branches, employees, services, customers, distributors, external_offices, expense_categories, service_orders, payments, cash_ledger, distributor_transactions, external_office_transactions, expenses, branch_transfers, daily_closings, audit_logs;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END $$;
