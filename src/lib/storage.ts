@@ -39,6 +39,7 @@ const STORAGE_KEYS = {
   DISTRIBUTORS: 'esnad_distributors_v1',
   DISTRIBUTOR_TXNS: 'esnad_distributor_txns_v1',
   EXTERNAL_OFFICES: 'esnad_external_offices_v1',
+  EXTERNAL_OFFICE_TXNS: 'esnad_external_office_txns_v1',
   EXPENSE_CATEGORIES: 'esnad_expense_categories_v1',
   EXPENSES: 'esnad_expenses_v1',
   TRANSFERS: 'esnad_transfers_v1',
@@ -774,7 +775,7 @@ export class ResilientStorageService {
           created_at: now,
         };
         txns.unshift(txn);
-        save('esnad_ext_office_txns', txns);
+        save(STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, txns);
 
         office.balance = newBalance;
         this.saveExternalOffice(office);
@@ -1367,27 +1368,39 @@ export class ResilientStorageService {
   public getExternalOffices(): ExternalOffice[] {
     const offices = load<ExternalOffice[]>(STORAGE_KEYS.EXTERNAL_OFFICES, INITIAL_EXTERNAL_OFFICES);
     const orders = this.getOrders();
-    const expenses = this.getExpenses();
+    const txns = this.getExternalOfficeTransactions();
 
     return offices.map(o => {
-      const officeOrders = orders.filter(ord => ord.external_office_id === o.id);
+      // All active (non-cancelled) orders linked to this external office
+      const officeOrders = orders.filter(ord => matchIds(ord.external_office_id, o.id) && ord.status !== 'cancelled');
       const totalJobs = officeOrders.length;
-      const officeExpenses = expenses.filter(e => e.external_office_id === o.id);
-      const totalPaid = officeExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      const totalOrdersCost = officeOrders.reduce((sum, ord) => sum + Number(ord.external_office_cost || 0), 0);
+
+      // Opening balance transactions
+      const openingTxns = txns.filter(t => matchIds(t.external_office_id, o.id) && t.type === 'opening_balance');
+      const totalOpening = openingTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      // Payouts paid manually to this office
+      const payoutTxns = txns.filter(t => matchIds(t.external_office_id, o.id) && t.type === 'office_payout');
+      const totalCostPaid = payoutTxns.reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+
+      // Current balance payable due to office = total accrued order costs + opening balance - total payouts paid
+      const balancePayable = Number((totalOrdersCost + totalOpening - totalCostPaid).toFixed(2));
 
       return {
         ...o,
+        balance: balancePayable,
         total_jobs_count: totalJobs,
-        total_cost_paid: totalPaid,
+        total_cost_paid: totalCostPaid,
       };
     });
   }
 
-  public saveExternalOffice(office: { id?: string; name: string; contact_person?: string; phone: string; specialty?: string; address?: string; is_active?: boolean }): ExternalOffice {
+  public saveExternalOffice(office: { id?: string; name: string; contact_person?: string; phone: string; specialty?: string; address?: string; is_active?: boolean; balance?: number }): ExternalOffice {
     const offices = load<ExternalOffice[]>(STORAGE_KEYS.EXTERNAL_OFFICES, INITIAL_EXTERNAL_OFFICES);
     let saved: ExternalOffice;
     if (office.id) {
-      const idx = offices.findIndex(o => o.id === office.id);
+      const idx = offices.findIndex(o => matchIds(o.id, office.id));
       if (idx >= 0) {
         saved = { ...offices[idx], ...office };
         offices[idx] = saved;
@@ -1400,6 +1413,7 @@ export class ResilientStorageService {
           specialty: office.specialty,
           address: office.address,
           is_active: office.is_active ?? true,
+          balance: office.balance ?? 0,
           created_at: new Date().toISOString(),
         };
         offices.push(saved);
@@ -1413,6 +1427,7 @@ export class ResilientStorageService {
         specialty: office.specialty,
         address: office.address,
         is_active: office.is_active ?? true,
+        balance: office.balance ?? 0,
         created_at: new Date().toISOString(),
       };
       offices.push(saved);
@@ -1428,14 +1443,29 @@ export class ResilientStorageService {
       specialty: params.specialty,
       address: params.address,
       is_active: true,
+      balance: params.openingBalance || 0,
     });
+    if (params.openingBalance && params.openingBalance > 0) {
+      const txns = this.getExternalOfficeTransactions();
+      const txn: ExternalOfficeTransaction = {
+        id: `off-txn-${Date.now()}`,
+        external_office_id: off.id,
+        amount: params.openingBalance,
+        type: 'opening_balance',
+        notes: 'رصيد افتتاحي للمكتب',
+        balance_after: params.openingBalance,
+        created_at: new Date().toISOString(),
+      };
+      txns.unshift(txn);
+      save(STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, txns);
+    }
     return off;
   }
 
   public getExternalOfficeTransactions(officeId?: string): ExternalOfficeTransaction[] {
-    const txns = load<ExternalOfficeTransaction[]>('esnad_ext_office_txns', []);
+    const txns = load<ExternalOfficeTransaction[]>(STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, []);
     if (!officeId) return txns;
-    return txns.filter(t => t.external_office_id === officeId);
+    return txns.filter(t => matchIds(t.external_office_id, officeId));
   }
 
   public recordExternalOfficePayment(params: {
@@ -1454,8 +1484,8 @@ export class ResilientStorageService {
     const amount = Number(params.amount);
 
     const offices = this.getExternalOffices();
-    const office = offices.find(o => o.id === params.officeId);
-    if (!office) throw new Error('المكتب الخارجي غير موجود');
+    const office = offices.find(o => matchIds(o.id, params.officeId));
+    if (!office) throw new Error('المكتب الخارجي غير موجود في النظام');
 
     // 1. Deduct from Drawer (expense ledger)
     this.appendLedgerEntry(
@@ -1486,7 +1516,7 @@ export class ResilientStorageService {
     };
 
     txns.unshift(txn);
-    save('esnad_ext_office_txns', txns);
+    save(STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, txns);
 
     this.addAuditLog(
       'سداد مستحقات مكتب خارجي',
