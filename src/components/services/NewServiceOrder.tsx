@@ -321,22 +321,6 @@ export const NewServiceOrder: React.FC = () => {
 
   return (
     <div id="new-service-order-container" className="max-w-6xl mx-auto space-y-6">
-      {/* Header Banner */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-            <h2 className="text-base font-black text-slate-100">تسجيل خدمه جديده</h2>
-          </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            الفرع الحالي: <span className="text-amber-400 font-bold">{activeBranch?.name}</span> • الموظف المسؤول:{' '}
-            <span className="text-slate-200 font-bold">{activeEmployee?.name}</span>
-          </p>
-        </div>
-
-        {/* Reset button removed */}
-      </div>
-
       <form onSubmit={handleSubmitOrder} className="space-y-6">
         {/* Visual Section 1: Customer Data */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
@@ -470,10 +454,11 @@ export const NewServiceOrder: React.FC = () => {
                   id="order-customer-phone-input"
                   type="tel"
                   required
+                  dir="rtl"
                   value={customerPhone}
                   onChange={handlePhoneChange}
                   placeholder="01xxxxxxxxx"
-                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-mono focus:border-amber-500 focus:outline-none"
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 font-mono text-right dir-rtl placeholder:text-right focus:border-amber-500 focus:outline-none"
                 />
                 <Phone className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>

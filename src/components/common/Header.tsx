@@ -196,9 +196,6 @@ export const Header: React.FC = () => {
                   <span className="text-xs font-bold text-slate-200">{activeEmployee?.name}</span>
                   <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 </div>
-                <span className="text-[10px] text-slate-400 block font-mono leading-tight">
-                  عهدة: {new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(employeeDrawerBalance)} ج.م
-                </span>
               </div>
             </button>
           </div>
