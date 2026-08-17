@@ -234,23 +234,48 @@ export const NewServiceOrder: React.FC = () => {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validations
+    // 0. Role Guard
+    if (activeEmployee?.role === 'viewer') {
+      showToast('error', 'صلاحية غير كافية', 'حسابك بصلاحية مشاهد فقط، لا يمكن تنفيذ أو تسجيل المعاملات.');
+      return;
+    }
+
+    // 1. Core Validations
     if (!customerName.trim()) {
-      showToast('error', 'بيانات ناقصة', 'يرجى إدخال اسم العميل بشكل صحيح.');
+      showToast('error', 'حقل مطلوب ناقص', 'يرجى إدخال اسم العميل بشكل صحيح.');
+      document.getElementById('order-customer-name-input')?.focus();
       return;
     }
     if (!customerPhone.trim()) {
-      showToast('error', 'بيانات ناقصة', 'يرجى إدخال رقم هاتف العميل.');
+      showToast('error', 'حقل مطلوب ناقص', 'يرجى إدخال رقم هاتف العميل.');
+      document.getElementById('order-customer-phone-input')?.focus();
       return;
     }
     if (!customerNationalId.trim() || customerNationalId.trim().length !== 14) {
-      showToast('error', 'بيانات غير صحيحة', 'يرجى إدخال الرقم القومي للعميل المكون من 14 رقماً.');
+      showToast('error', 'الرقم القومي غير صحيح', 'يرجى إدخال الرقم القومي للعميل المكون من 14 رقماً بالكامل.');
+      document.getElementById('order-customer-nid-input')?.focus();
       return;
     }
     if (!selectedServiceId) {
-      showToast('error', 'بيانات ناقصة', 'يرجى اختيار الخدمة المطلوبة.');
+      showToast('error', 'اختيار الخدمة', 'يرجى اختيار الخدمة الحكومية المطلوبة.');
       return;
     }
+
+    // Dynamic Custom Fields Validation
+    if (currentService?.fields_config) {
+      for (const field of currentService.fields_config) {
+        if (field.required) {
+          const val = customFieldsData[field.id];
+          if (val === undefined || val === null || (typeof val === 'string' && !val.trim())) {
+            showToast('error', 'حقل خدمة مطلوب', `يرجى إكمال الحقل المطلوب للخدمة: (${field.label})`);
+            const elem = document.getElementById(`custom-field-${field.id}`);
+            if (elem) elem.focus();
+            return;
+          }
+        }
+      }
+    }
+
     if (calculatedServicePrice <= 0 && customPriceOverride === '') {
       showToast('error', 'تحديد السعر', 'يرجى إدخال سعر الخدمة المتفق عليه مع العميل.');
       return;

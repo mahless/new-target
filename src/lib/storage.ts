@@ -731,18 +731,54 @@ export class ResilientStorageService {
       );
     }
 
-    // 8. Handle External Office Cost (Recorded as direct expense)
+    // 8. Handle External Office Cost (Accrued Payable - No Auto Cash Deduction)
     if (params.externalOfficeId && extOfficeCost > 0) {
-      this.recordExpense({
-        branchId,
-        employeeId,
-        categoryName: 'تكلفة مكتب خارجي',
+      const offices = this.getExternalOffices();
+      const office = offices.find(o => o.id === params.externalOfficeId);
+      const officeName = office ? office.name : 'مكتب خارجي';
+      const officeNotes = `مستحق ل ${officeName} ${orderNumber}`;
+
+      // A) Record expense entry for reporting (without deducting drawer cash)
+      const expEntry: Expense = {
+        id: `exp-${timestamp}`,
+        branch_id: branchId,
+        employee_id: employeeId,
+        category_id: null,
+        category_name: 'تكلفة مكتب خارجي (مستحقات معلقة)',
         amount: extOfficeCost,
-        relatedOrderId: order.id,
-        externalOfficeId: params.externalOfficeId,
-        notes: `تكلفة تنفيذ طلب ${orderNumber} لدى المكتب الخارجي`,
-        idempotencyKey: `ext-exp-${params.idempotencyKey}`,
-      });
+        related_order_id: order.id,
+        external_office_id: params.externalOfficeId,
+        notes: officeNotes,
+        idempotency_key: `ext-exp-${params.idempotencyKey}`,
+        created_at: now,
+      };
+      const allExpenses = load<Expense[]>(STORAGE_KEYS.EXPENSES, []);
+      allExpenses.unshift(expEntry);
+      save(STORAGE_KEYS.EXPENSES, allExpenses);
+
+      // B) Record external office credit transaction & update office payable balance
+      if (office) {
+        const txns = this.getExternalOfficeTransactions();
+        const newBalance = Number(((office.balance || 0) + extOfficeCost).toFixed(2));
+        const txn: ExternalOfficeTransaction = {
+          id: `off-txn-${timestamp}`,
+          external_office_id: office.id,
+          branch_id: branchId,
+          employee_id: employeeId,
+          amount: extOfficeCost,
+          type: 'service_order_cost',
+          reference_id: order.id,
+          notes: officeNotes,
+          idempotency_key: `ext-tx-${params.idempotencyKey}`,
+          balance_after: newBalance,
+          created_at: now,
+        };
+        txns.unshift(txn);
+        save('esnad_ext_office_txns', txns);
+
+        office.balance = newBalance;
+        this.saveExternalOffice(office);
+      }
     }
 
     // 9. Audit Log
