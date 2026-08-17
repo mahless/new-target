@@ -4,7 +4,7 @@
  * Fast Real-time Operations Center (مركز العمليات السريع)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
@@ -47,6 +47,13 @@ export const OperationsCenter: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Enforce scope lock: Non-managers can ONLY see their own employee custody
+  useEffect(() => {
+    if (activeEmployee?.role !== 'manager' && financialViewScope !== 'employee') {
+      setFinancialViewScope('employee');
+    }
+  }, [activeEmployee, financialViewScope, setFinancialViewScope]);
 
   // Filter current branch orders
   const branchOrders = orders.filter(
@@ -146,18 +153,29 @@ export const OperationsCenter: React.FC = () => {
             <User className="w-3.5 h-3.5" />
             <span>عهدتي الشخصية</span>
           </button>
-          <button
-            id="scope-toggle-branch-btn"
-            onClick={() => setFinancialViewScope('branch')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-              financialViewScope === 'branch'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>إجمالي الفرع</span>
-          </button>
+
+          {activeEmployee?.role === 'manager' ? (
+            <button
+              id="scope-toggle-branch-btn"
+              onClick={() => setFinancialViewScope('branch')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                financialViewScope === 'branch'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-black'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>إجمالي الفرع</span>
+            </button>
+          ) : (
+            <div
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 opacity-60 cursor-not-allowed flex items-center gap-1.5"
+              title="خاص بمدير الفرع فقط"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>إجمالي الفرع (مدير)</span>
+            </div>
+          )}
         </div>
       </div>
 

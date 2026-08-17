@@ -73,9 +73,16 @@ export const Header: React.FC = () => {
     const validPass = target?.password || target?.pin_code || '1234';
     if (target && (validPass === enteredPin.trim() || target.pin_code === enteredPin.trim())) {
       setActiveEmployeeId(targetEmpId);
+      if (target.role !== 'manager') {
+        const empBranch = target.default_branch_id || target.branch_id;
+        if (empBranch) {
+          setActiveBranchId(empBranch);
+        }
+        setFinancialViewScope('employee');
+      }
       setIsEmployeeModalOpen(false);
       setEnteredPin('');
-      showToast('success', 'تم تسجيل الدخول', `مرحباً بك، ${target.name}`);
+      showToast('success', 'تم تسجيل الدخول', `مرحباً بك، ${target.name} (${target.role === 'manager' ? 'مدير عام' : target.role === 'viewer' ? 'مشاهد' : 'موظف'})`);
     } else {
       showToast('error', 'كلمة المرور غير صحيحة', 'يرجى إدخال كلمة المرور أو رمز PIN الصحيح الخاص بالموظف.');
     }
@@ -154,16 +161,23 @@ export const Header: React.FC = () => {
 
           {/* Active Branch Selector Modal */}
           <div className="hidden md:block w-auto min-w-[180px]">
-            <ModalSelect
-              id="header-branch-select"
-              modalTitle="تحديد الفرع الحالي"
-              modalSubtitle="اختر الفرع لمتابعة العمليات والخزينة الخاصة به"
-              options={branchOptions}
-              value={activeBranch?.id || ''}
-              onChange={(val) => setActiveBranchId(val)}
-              placeholder="اختر الفرع..."
-              buttonClassName="!py-1.5 !px-4 !bg-slate-950/80 !border-slate-800 shadow-inner whitespace-nowrap"
-            />
+            {activeEmployee?.role === 'manager' ? (
+              <ModalSelect
+                id="header-branch-select"
+                modalTitle="تحديد الفرع الحالي"
+                modalSubtitle="اختر الفرع لمتابعة العمليات والخزينة الخاصة به"
+                options={branchOptions}
+                value={activeBranch?.id || ''}
+                onChange={(val) => setActiveBranchId(val)}
+                placeholder="اختر الفرع..."
+                buttonClassName="!py-1.5 !px-4 !bg-slate-950/80 !border-slate-800 shadow-inner whitespace-nowrap"
+              />
+            ) : (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-bold text-slate-300">
+                <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{activeBranch?.name || 'فرعك المخصص'}</span>
+              </div>
+            )}
           </div>
 
           {/* Active Employee PIN Profile (Desktop/Tablet) */}

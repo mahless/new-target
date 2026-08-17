@@ -23,21 +23,33 @@ import { AuditLogsView } from '../audit/AuditLogsView';
 import { SettingsView } from '../settings/SettingsView';
 
 export const AppLayout: React.FC = () => {
-  const { activeTab, setActiveTab } = useApp();
+  const { activeTab, setActiveTab, activeEmployee } = useApp();
+  const role = activeEmployee?.role || 'employee';
+
+  // Role Protection Guard
+  useEffect(() => {
+    if (role === 'viewer') {
+      if (['new_service', 'transfers', 'daily_closing', 'settings', 'audit_logs'].includes(activeTab)) {
+        setActiveTab('operations');
+      }
+    } else if (role === 'employee') {
+      if (['settings', 'audit_logs'].includes(activeTab)) {
+        setActiveTab('operations');
+      }
+    }
+  }, [activeTab, role, setActiveTab]);
 
   // Keyboard shortcut listener (e.g. F1 to open new service order)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F1') {
+      if (e.key === 'F1' && role !== 'viewer') {
         e.preventDefault();
         setActiveTab('new_service');
-      } else if (e.key === 'Escape') {
-        // general esc handling
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTab]);
+  }, [setActiveTab, role]);
 
   const renderActiveView = () => {
     switch (activeTab) {

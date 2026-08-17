@@ -31,7 +31,8 @@ interface NavItem {
 }
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, stats, isSidebarOpen, setIsSidebarOpen } = useApp();
+  const { activeTab, setActiveTab, stats, isSidebarOpen, setIsSidebarOpen, activeEmployee } = useApp();
+  const role = activeEmployee?.role || 'employee';
 
   const handleSelectTab = (tabId: NavigationTab) => {
     setActiveTab(tabId);
@@ -105,6 +106,16 @@ export const Sidebar: React.FC = () => {
     },
   ];
 
+  const allowedItems = navItems.filter(item => {
+    if (role === 'viewer') {
+      return !['new_service', 'transfers', 'daily_closing', 'settings', 'audit_logs'].includes(item.id);
+    }
+    if (role === 'employee') {
+      return !['settings', 'audit_logs'].includes(item.id);
+    }
+    return true; // manager sees everything
+  });
+
   return (
     <>
       {/* Mobile Backdrop Overlay */}
@@ -129,7 +140,7 @@ export const Sidebar: React.FC = () => {
             <span>القائمة الرئيسية</span>
             <span className="md:hidden text-amber-400 text-xs font-mono font-normal">تارجت للخدمات</span>
           </div>
-          {navItems.map((item) => {
+          {allowedItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
 
