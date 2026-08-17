@@ -454,7 +454,7 @@ export const DailyClosingView: React.FC = () => {
               className="p-5 bg-white text-slate-900 rounded-xl border border-slate-200 text-xs space-y-4"
             >
               <div className="text-center border-b pb-3 border-slate-200">
-                <h2 className="text-base font-black">مكتب إسناد للخدمات الحكومية</h2>
+                <h2 className="text-base font-black">تارجت للخدمات الحكومية</h2>
                 <p className="text-slate-600 font-bold">محضر جرد وإغلاق وردية رسمية</p>
                 <div className="mt-1 font-mono text-[11px] text-slate-500">
                   تاريخ التسوية: {new Date(selectedClosingForPrint.closing_date).toLocaleDateString('ar-EG-u-nu-latn')}

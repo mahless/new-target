@@ -138,7 +138,7 @@ export const Sidebar: React.FC = () => {
         <div className="space-y-1 overflow-y-auto max-h-[calc(100vh-8rem)] md:max-h-none">
           <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-500 flex items-center justify-between">
             <span>القائمة الرئيسية</span>
-            <span className="md:hidden text-amber-400 text-xs font-mono font-normal">تارجت للخدمات</span>
+            <span className="md:hidden text-amber-400 text-xs font-mono font-normal">تارجت للخدمات الحكومية</span>
           </div>
           {allowedItems.map((item) => {
             const Icon = item.icon;
