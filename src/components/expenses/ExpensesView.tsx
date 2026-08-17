@@ -369,9 +369,8 @@ export const ExpensesView: React.FC = () => {
             <div className="flex justify-between font-bold pt-1 border-t border-slate-800">
               <span>الرصيد بعد الخصم:</span>
               <span
-                className={`font-mono ${
-                  projectedBalance < 0 ? 'text-rose-400' : 'text-emerald-400'
-                }`}
+                className={`font-mono ${projectedBalance < 0 ? 'text-rose-400' : 'text-emerald-400'
+                  }`}
               >
                 {formatCurrency(projectedBalance)}
               </span>
@@ -409,9 +408,8 @@ export const ExpensesView: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting || numAmount <= 0}
-              className={`flex-1 flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-400 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md ${
-                isSubmitting || numAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`flex-1 flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-400 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md ${isSubmitting || numAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
               <Save className="w-4 h-4" />
               <span>تأكيد الصرف وخصم الدرج</span>
