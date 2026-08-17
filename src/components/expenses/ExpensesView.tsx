@@ -7,7 +7,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { storage } from '../../lib/storage';
+import { storage, matchIds } from '../../lib/storage';
 import { ExpenseCategory } from '../../types';
 import {
   Receipt,
@@ -30,6 +30,7 @@ export const ExpensesView: React.FC = () => {
     branches,
     employees,
     expenses,
+    orders,
     drawerBalance,
     refreshData,
     showToast,
@@ -232,8 +233,10 @@ export const ExpensesView: React.FC = () => {
                 </tr>
               ) : (
                 filteredExpenses.map(exp => {
-                  const branch = branches.find(b => b.id === exp.branch_id);
-                  const employee = employees.find(e => e.id === exp.employee_id);
+                  const branch = branches.find(b => matchIds(b.id, exp.branch_id));
+                  const employee = employees.find(e => matchIds(e.id, exp.employee_id));
+                  const relatedOrder = orders.find(o => matchIds(o.id, exp.related_order_id));
+
                   return (
                     <tr key={exp.id} className="hover:bg-slate-800/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono text-slate-400">
@@ -249,8 +252,24 @@ export const ExpensesView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-200 font-medium">{exp.description || exp.notes}</td>
-                      <td className="py-3.5 px-4 font-mono text-slate-400">
-                        {exp.receipt_number || '-'}
+                      <td className="py-3.5 px-4 font-mono text-slate-300">
+                        {relatedOrder ? (
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-amber-400 block text-xs font-mono">
+                              #{relatedOrder.order_number}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block font-mono">
+                              {new Date(relatedOrder.created_at).toLocaleDateString('ar-EG-u-nu-latn')}{' '}
+                              <span className="text-slate-500">
+                                {new Date(relatedOrder.created_at).toLocaleTimeString('ar-EG-u-nu-latn')}
+                              </span>
+                            </span>
+                          </div>
+                        ) : exp.receipt_number ? (
+                          <span className="text-slate-300 font-mono">{exp.receipt_number}</span>
+                        ) : (
+                          <span className="text-slate-500">-</span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-slate-300">{employee?.name}</td>
                       <td className="py-3.5 px-4 text-left font-mono font-black text-rose-400">

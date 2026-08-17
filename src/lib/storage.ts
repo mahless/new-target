@@ -1453,6 +1453,7 @@ export class ResilientStorageService {
   public recordExternalOfficePayment(params: {
     officeId: string;
     amount: number;
+    relatedOrderId?: string;
     notes?: string;
     idempotencyKey: string;
     branchId?: string;
@@ -1491,6 +1492,7 @@ export class ResilientStorageService {
       category_id: null,
       category_name: paymentNote,
       amount,
+      related_order_id: params.relatedOrderId || null,
       external_office_id: office.id,
       notes: paymentNote,
       idempotency_key: `ext-pay-exp-${params.idempotencyKey}`,
