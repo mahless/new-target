@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { CollectPaymentModal } from './CollectPaymentModal';
 import { TransferBranchModal } from './TransferBranchModal';
+import { formatSpeedLabel } from '../../lib/formatters';
 
 interface OrderDetailsModalProps {
   orderId: string | null;
@@ -196,7 +197,7 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">سرعة التنفيذ:</span>
-                <span className="font-bold text-amber-400">{order.speed}</span>
+                <span className="font-bold text-amber-400">{formatSpeedLabel(order.speed)}</span>
               </div>
               {order.form_barcode && (
                 <div className="flex justify-between">

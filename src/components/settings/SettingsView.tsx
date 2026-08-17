@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { ModalSelect } from '../common/ModalSelect';
+import { formatSpeedLabel } from '../../lib/formatters';
 
 export const SettingsView: React.FC = () => {
   const {
@@ -69,7 +70,7 @@ export const SettingsView: React.FC = () => {
     { code: 'normal', label: 'عادي', extra_cost: 0 },
     { code: 'urgent', label: 'مستعجل', extra_cost: 0 },
     { code: 'instant', label: 'فوري', extra_cost: 0 },
-    { code: 'vip', label: 'VIP / سوبر', extra_cost: 0 },
+    { code: 'super_instant', label: 'سوبر فوري', extra_cost: 0 },
   ]);
 
   const handleOpenEditService = (srv: Service) => {
@@ -475,7 +476,7 @@ export const SettingsView: React.FC = () => {
                         key={spd.code}
                         className="text-[10px] bg-slate-900 text-slate-300 px-2 py-0.5 rounded border border-slate-800"
                       >
-                        {spd.label}
+                        {formatSpeedLabel(spd.label || spd.code)}
                       </span>
                     ))}
                   </div>

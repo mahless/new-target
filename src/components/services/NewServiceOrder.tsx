@@ -31,6 +31,7 @@ import {
 import { Modal } from '../common/Modal';
 import { ModalSelect } from '../common/ModalSelect';
 import { ServiceOrder } from '../../types';
+import { formatSpeedLabel } from '../../lib/formatters';
 
 export const NewServiceOrder: React.FC = () => {
   const {
@@ -563,19 +564,19 @@ export const NewServiceOrder: React.FC = () => {
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
                 سرعة التنفيذ المطلوبة <span className="text-rose-400">*</span>:
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {availableSpeeds.map(speed => (
                   <button
                     key={speed.code}
                     type="button"
                     onClick={() => setSelectedSpeedCode(speed.code)}
-                    className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition-all text-center ${
+                    className={`px-2 py-1.5 rounded-lg text-xs font-bold border transition-all text-center ${
                       selectedSpeedCode === speed.code
                         ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-black'
                         : 'bg-slate-950/80 text-slate-300 border-slate-800 hover:border-slate-700'
                     }`}
                   >
-                    <span>{speed.label}</span>
+                    <span>{formatSpeedLabel(speed.label || speed.code)}</span>
                   </button>
                 ))}
               </div>
@@ -1043,7 +1044,7 @@ export const NewServiceOrder: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-slate-500">سرعة التنفيذ:</span>{' '}
-                  <span className="font-bold">{createdOrder.speed}</span>
+                  <span className="font-bold">{formatSpeedLabel(createdOrder.speed)}</span>
                 </div>
                 {createdOrder.form_barcode && (
                   <div>

@@ -24,6 +24,7 @@ import {
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { CollectPaymentModal } from './CollectPaymentModal';
 import { ModalSelect } from '../common/ModalSelect';
+import { formatSpeedLabel } from '../../lib/formatters';
 
 export const OrdersList: React.FC = () => {
   const {
@@ -235,7 +236,7 @@ export const OrdersList: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <div className="text-slate-200 font-semibold">{order.service_name}</div>
                         <div className="text-[10px] text-slate-400">
-                          {order.speed} {order.form_barcode && `• #${order.form_barcode}`}
+                          {formatSpeedLabel(order.speed)} {order.form_barcode && `• #${order.form_barcode}`}
                         </div>
                       </td>
                       <td className="py-3.5 px-4">

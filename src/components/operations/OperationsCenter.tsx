@@ -27,6 +27,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { ServiceOrder } from '../../types';
+import { formatSpeedLabel } from '../../lib/formatters';
 
 export const OperationsCenter: React.FC = () => {
   const {
@@ -401,7 +402,7 @@ export const OperationsCenter: React.FC = () => {
                     </td>
                     <td className="py-3 px-3">
                       <div className="text-slate-200 font-medium">{order.service_name}</div>
-                      <div className="text-[10px] text-slate-400">السرعة: {order.speed}</div>
+                      <div className="text-[10px] text-slate-400">السرعة: {formatSpeedLabel(order.speed)}</div>
                     </td>
                     <td className="py-3 px-3 font-mono font-bold text-slate-200">
                       {formatCurrency(order.price)}
