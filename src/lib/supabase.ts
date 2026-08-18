@@ -493,60 +493,54 @@ export const supabaseSyncService = {
 
       // 1. Pull branches
       const dbBranches = await fetchTable('branches');
-      if (dbBranches.length > 0) {
-        const localBranches = dbBranches.map(b => ({
-          id: b.id,
-          name: b.name,
-          code: b.code,
-          phone: b.phone || undefined,
-          address: b.address || undefined,
-          is_active: b.is_active,
-          created_at: b.created_at,
-          updated_at: b.updated_at,
-        }));
-        saveLocal(STORAGE_KEYS.BRANCHES, localBranches);
-        details['branches'] = { pushed: 0, pulled: dbBranches.length };
-      }
+      const localBranches = dbBranches.map(b => ({
+        id: b.id,
+        name: b.name,
+        code: b.code,
+        phone: b.phone || undefined,
+        address: b.address || undefined,
+        is_active: b.is_active,
+        created_at: b.created_at,
+        updated_at: b.updated_at,
+      }));
+      saveLocal(STORAGE_KEYS.BRANCHES, localBranches);
+      details['branches'] = { pushed: 0, pulled: dbBranches.length };
 
       // 2. Pull employees
       const dbEmployees = await fetchTable('employees');
-      if (dbEmployees.length > 0) {
-        const localEmployees = dbEmployees.map(e => ({
-          id: e.id,
-          name: e.name,
-          code: e.code,
-          username: e.username,
-          email: e.email || undefined,
-          phone: e.phone || undefined,
-          pin_code: e.pin_code,
-          password: e.password_hash || undefined,
-          branch_id: e.branch_id || undefined,
-          default_branch_id: e.default_branch_id || undefined,
-          role: e.role,
-          is_active: e.is_active,
-          created_at: e.created_at,
-        }));
-        saveLocal(STORAGE_KEYS.EMPLOYEES, localEmployees);
-        details['employees'] = { pushed: 0, pulled: dbEmployees.length };
-      }
+      const localEmployees = dbEmployees.map(e => ({
+        id: e.id,
+        name: e.name,
+        code: e.code,
+        username: e.username,
+        email: e.email || undefined,
+        phone: e.phone || undefined,
+        pin_code: e.pin_code,
+        password: e.password_hash || undefined,
+        branch_id: e.branch_id || undefined,
+        default_branch_id: e.default_branch_id || undefined,
+        role: e.role,
+        is_active: e.is_active,
+        created_at: e.created_at,
+      }));
+      saveLocal(STORAGE_KEYS.EMPLOYEES, localEmployees);
+      details['employees'] = { pushed: 0, pulled: dbEmployees.length };
 
       // 3. Pull services
       const dbServices = await fetchTable('services');
-      if (dbServices.length > 0) {
-        const localServices = dbServices.map(s => ({
-          id: s.id,
-          name: s.name,
-          category: s.category,
-          speeds: s.speeds || [],
-          fields_config: s.fields_config || [],
-          base_price: Number(s.base_price),
-          execution_days: s.execution_days,
-          is_active: s.is_active,
-          created_at: s.created_at,
-        }));
-        saveLocal(STORAGE_KEYS.SERVICES, localServices);
-        details['services'] = { pushed: 0, pulled: dbServices.length };
-      }
+      const localServices = dbServices.map(s => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        speeds: s.speeds || [],
+        fields_config: s.fields_config || [],
+        base_price: Number(s.base_price),
+        execution_days: s.execution_days,
+        is_active: s.is_active,
+        created_at: s.created_at,
+      }));
+      saveLocal(STORAGE_KEYS.SERVICES, localServices);
+      details['services'] = { pushed: 0, pulled: dbServices.length };
 
       // 4. Pull customers
       const dbCustomers = await fetchTable('customers');
@@ -773,16 +767,14 @@ export const supabaseSyncService = {
 
       // 16. Pull idempotency cache
       const dbIdempotency = await fetchTable('idempotency_keys');
-      if (dbIdempotency.length > 0) {
-        const localCache: Record<string, string> = {};
-        dbIdempotency.forEach(item => {
-          localCache[item.key] = typeof item.response_payload === 'string'
-            ? item.response_payload
-            : JSON.stringify(item.response_payload);
-        });
-        saveLocal(STORAGE_KEYS.IDEMPOTENCY_CACHE, localCache);
-        details['idempotency_keys'] = { pushed: 0, pulled: dbIdempotency.length };
-      }
+      const localCache: Record<string, string> = {};
+      dbIdempotency.forEach(item => {
+        localCache[item.key] = typeof item.response_payload === 'string'
+          ? item.response_payload
+          : JSON.stringify(item.response_payload);
+      });
+      saveLocal(STORAGE_KEYS.IDEMPOTENCY_CACHE, localCache);
+      details['idempotency_keys'] = { pushed: 0, pulled: dbIdempotency.length };
 
       return {
         success: true,
