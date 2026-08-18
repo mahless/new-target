@@ -160,22 +160,22 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Active Branch Selector Modal */}
-          <div className="hidden md:block w-auto min-w-[180px]">
+          <div className="w-auto min-w-[130px] md:min-w-[180px]">
             {activeEmployee?.role === 'manager' ? (
               <ModalSelect
                 id="header-branch-select"
                 modalTitle="تحديد الفرع الحالي"
-                modalSubtitle="اختر الفرع لمتابعة العمليات والخزينة الخاصة به"
+                modalSubtitle="اختر الفرع لمتابعة العمليات"
                 options={branchOptions}
                 value={activeBranch?.id || ''}
                 onChange={(val) => setActiveBranchId(val)}
                 placeholder="اختر الفرع..."
-                buttonClassName="!py-1.5 !px-4 !bg-slate-950/80 !border-slate-800 shadow-inner whitespace-nowrap"
+                buttonClassName="!py-1.5 !px-2 md:!px-4 !bg-slate-950/80 !border-slate-800 shadow-inner whitespace-nowrap text-[11px] md:text-xs"
               />
             ) : (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs font-bold text-slate-300">
-                <Building2 className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>{activeBranch?.name || 'فرعك المخصص'}</span>
+              <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] md:text-xs font-bold text-slate-300 whitespace-nowrap">
+                <Building2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400 shrink-0" />
+                <span className="truncate max-w-[80px] md:max-w-none">{activeBranch?.name || 'فرعك المخصص'}</span>
               </div>
             )}
           </div>
