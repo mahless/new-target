@@ -28,14 +28,14 @@ DELETE FROM idempotency_keys;
 -- ------------------------------------------------------------------------------
 DELETE FROM service_orders;
 DELETE FROM customers;
-DELETE FROM distributors;
+-- DELETE FROM distributors;
 DELETE FROM external_offices;
 
 -- ------------------------------------------------------------------------------
 -- 3. الموظفون والفروع (Employees & Branches)
 -- ------------------------------------------------------------------------------
-DELETE FROM employees;
-DELETE FROM branches;
+-- DELETE FROM employees;
+-- DELETE FROM branches;
 
 -- ------------------------------------------------------------------------------
 -- 4. إبقاء دليل الخدمات الحكومية وتصنيفات المصروفات المرجعية (Master Reference Data)

@@ -51,7 +51,6 @@ export const Sidebar: React.FC = () => {
       id: 'new_service',
       label: 'خدمة جديدة',
       icon: PlusCircle,
-      highlight: true,
     },
     {
       id: 'orders',
