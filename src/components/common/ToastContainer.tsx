@@ -16,7 +16,7 @@ export const ToastContainer: React.FC = () => {
   return (
     <div
       id="toast-notification-container"
-      className="fixed bottom-5 left-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"
+      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] flex flex-col gap-2 w-[90%] max-w-md pointer-events-none"
       dir="rtl"
     >
       {toasts.map(toast => {
@@ -38,7 +38,7 @@ export const ToastContainer: React.FC = () => {
           <div
             key={toast.id}
             id={`toast-${toast.id}`}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-200 animate-in slide-in-from-bottom-3 ${borderMap[toast.type]}`}
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-300 animate-in zoom-in-95 ${borderMap[toast.type]}`}
           >
             <div className="mt-0.5">{iconMap[toast.type]}</div>
             <div className="flex-1 min-w-0">
