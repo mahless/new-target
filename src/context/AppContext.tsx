@@ -24,7 +24,7 @@ import {
   FinancialViewScope,
 } from '../types';
 import { storage } from '../lib/storage';
-import { isSupabaseConfigured, triggerAutoPush, subscribeToRealtimeChanges, clearAllLocalData } from '../lib/supabase';
+import { isSupabaseConfigured, supabaseSyncService, subscribeToRealtimeChanges, clearAllLocalData } from '../lib/supabase';
 
 export type NavigationTab =
   | 'operations'
@@ -134,7 +134,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsOnline(true);
       showToast('success', 'تمت استعادة الاتصال', 'النظام متصل بالشبكة ويعمل بحالة ممتازة.');
       if (isSupabaseConfigured) {
-        triggerAutoPush(500);
+        supabaseSyncService.pullFromSupabase().then(() => refreshData());
       }
     };
     const handleOffline = () => {
@@ -145,9 +145,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial background push on mount if configured
+    // Initial background pull on mount if configured
     if (isSupabaseConfigured) {
-      triggerAutoPush(1500);
+      supabaseSyncService.pullFromSupabase().then(() => refreshData());
     }
 
     // Subscribe to Supabase Realtime DB changes
