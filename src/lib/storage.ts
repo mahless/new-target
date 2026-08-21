@@ -663,6 +663,8 @@ export class ResilientStorageService {
       price,
       total_paid: totalPaid,
       remaining,
+      cash_amount: cash,
+      electronic_amount: electronic,
       distributor_id: params.distributorId || null,
       external_office_id: params.externalOfficeId || null,
       external_office_cost: extOfficeCost,

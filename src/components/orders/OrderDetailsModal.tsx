@@ -341,6 +341,12 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 <span className="text-sm font-bold font-mono text-emerald-400">
                   {formatCurrency(order.total_paid)}
                 </span>
+                <div className="text-[10px] font-mono text-slate-400 mt-0.5 space-x-1 space-x-reverse">
+                  <span className="text-emerald-400">كاش: {formatCurrency(order.cash_amount ?? orderPayments.reduce((s, p) => s + (p.cash_amount || 0), 0))}</span>
+                  { (order.electronic_amount ?? orderPayments.reduce((s, p) => s + (p.electronic_amount || 0), 0)) > 0 && (
+                    <span className="text-sky-400"> • إلكتروني: {formatCurrency(order.electronic_amount ?? orderPayments.reduce((s, p) => s + (p.electronic_amount || 0), 0))}</span>
+                  )}
+                </div>
               </div>
               <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
                 <span className="text-[10px] text-slate-400 block">المتبقي</span>
