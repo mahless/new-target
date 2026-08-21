@@ -69,20 +69,20 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalRef}
         id="app-modal-container"
-        className={`w-full ${maxWidthClass} bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150`}
+        className={`w-full ${maxWidthClass} bg-amber-500/25 border-2 border-amber-500/50 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 text-slate-100`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-slate-900/60">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-amber-500/30 bg-slate-950/60 backdrop-blur-md">
           <div>
             <h3 className="text-lg font-bold text-slate-100">{title}</h3>
-            {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-xs text-amber-200/80 mt-0.5">{subtitle}</p>}
           </div>
           {showCloseButton && (
             <button
               id="modal-close-btn"
               type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="p-1.5 text-amber-200 hover:text-white hover:bg-amber-500/30 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500/50"
               aria-label="إغلاق النافذة"
             >
               <X className="w-5 h-5" />

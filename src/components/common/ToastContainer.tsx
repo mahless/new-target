@@ -28,10 +28,10 @@ export const ToastContainer: React.FC = () => {
         };
 
         const borderMap = {
-          success: 'border-emerald-500/30 bg-slate-900/95 text-slate-100',
-          error: 'border-rose-500/30 bg-slate-900/95 text-slate-100',
-          warning: 'border-amber-500/30 bg-slate-900/95 text-slate-100',
-          info: 'border-sky-500/30 bg-slate-900/95 text-slate-100',
+          success: 'border-amber-500/50 bg-amber-500/25 text-slate-100 shadow-amber-500/10',
+          error: 'border-amber-500/50 bg-amber-500/25 text-slate-100 shadow-amber-500/10',
+          warning: 'border-amber-500/50 bg-amber-500/25 text-slate-100 shadow-amber-500/10',
+          info: 'border-amber-500/50 bg-amber-500/25 text-slate-100 shadow-amber-500/10',
         };
 
         return (
