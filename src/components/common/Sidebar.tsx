@@ -194,7 +194,7 @@ export const Sidebar: React.FC = () => {
             <span>حالة التشغيل</span>
             <span className="text-emerald-400 font-bold flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              نشط ومؤمّن
+              نشط
             </span>
           </div>
         </div>

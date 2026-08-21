@@ -45,7 +45,7 @@ export const DailyClosingView: React.FC = () => {
   } = useApp();
 
   const [actualCashInput, setActualCashInput] = useState<string>('');
-  const [closingType, setClosingType] = useState<'carry_over' | 'payout_to_main'>('carry_over');
+  const [closingType, setClosingType] = useState<'carry_over' | 'payout_to_main'>('payout_to_main');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClosingForPrint, setSelectedClosingForPrint] = useState<DailyClosing | null>(null);
@@ -78,11 +78,6 @@ export const DailyClosingView: React.FC = () => {
 
   const handlePerformClosing = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (actualCashInput === '' || isNaN(Number(actualCashInput))) {
-      showToast('error', 'الجرد الفعلي', 'يرجى إدخال مبلغ الجرد الفعلي للخزينة.');
-      return;
-    }
 
     try {
       setIsSubmitting(true);
@@ -167,36 +162,35 @@ export const DailyClosingView: React.FC = () => {
       </div>
 
       {/* Live Reconciliation Worksheet */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Col: Worksheet Computation Box */}
-        <div className="lg:col-span-7 bg-slate-900/90 border-2 border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-amber-400" />
-              <h3 className="text-sm font-black text-slate-100">
-                ورقة تسوية اليوم
-              </h3>
-            </div>
-            <span className="text-xs text-slate-500 font-mono">Shift Reconciliation</span>
+      <div className="bg-slate-900/90 border-2 border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-amber-400" />
+            <h3 className="text-base font-black text-slate-100">
+              ورقة تسوية اليوم
+            </h3>
           </div>
+          <span className="text-xs text-slate-500 font-mono">Shift Reconciliation</span>
+        </div>
 
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-              <span className="text-slate-400 flex items-center gap-1.5">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                <span>إجمالي المقبوضات النقدية المسجلة:</span>
+        <form onSubmit={handlePerformClosing} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="flex justify-between items-center p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+              <span className="text-slate-400 flex items-center gap-1.5 font-bold">
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span>إجمالي النقدية المسجلة:</span>
               </span>
-              <span className="font-bold font-mono text-emerald-400 text-sm">
+              <span className="font-bold font-mono text-emerald-400 text-base">
                 +{formatCurrency(totalIn)}
               </span>
             </div>
 
-            <div className="flex justify-between items-center p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-              <span className="text-slate-400 flex items-center gap-1.5">
-                <Receipt className="w-3.5 h-3.5 text-rose-400" />
-                <span>إجمالي المنصرفات النقدية المسجلة:</span>
+            <div className="flex justify-between items-center p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+              <span className="text-slate-400 flex items-center gap-1.5 font-bold">
+                <Receipt className="w-4 h-4 text-rose-400" />
+                <span>إجمالي المصروفات:</span>
               </span>
-              <span className="font-bold font-mono text-rose-400 text-sm">
+              <span className="font-bold font-mono text-rose-400 text-base">
                 -{formatCurrency(totalOut)}
               </span>
             </div>
@@ -204,10 +198,7 @@ export const DailyClosingView: React.FC = () => {
             <div className="flex justify-between items-center p-4 rounded-xl bg-slate-950 border border-amber-500/30">
               <div>
                 <span className="text-slate-300 font-bold block">
-                  الرصيد الدفتري المحسوب (System Balance):
-                </span>
-                <span className="text-[11px] text-slate-500">
-                  حاصل كافة قيود دفتر الأستاذ بالدرج
+                 الكاش المتاح الان:
                 </span>
               </div>
               <span className="font-black font-mono text-amber-400 text-xl">
@@ -216,155 +207,32 @@ export const DailyClosingView: React.FC = () => {
             </div>
           </div>
 
-          {/* Variance Warning Indicator */}
-          {actualCashInput !== '' && (
-            <div
-              className={`p-4 rounded-xl border flex items-center justify-between ${
-                difference === 0
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  : difference > 0
-                  ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
-                  : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {difference === 0 ? (
-                  <CheckCircle2 className="w-5 h-5" />
-                ) : (
-                  <AlertTriangle className="w-5 h-5" />
-                )}
-                <div>
-                  <div className="font-bold text-xs">
-                    {difference === 0
-                      ? 'الرصيد الفعلي متطابق تماماً مع الدفتري'
-                      : difference > 0
-                      ? 'يوجد زيادة نقدية فعلية بالخزينة'
-                      : 'يوجد عجز نقدي في الخزينة'}
-                  </div>
-                  <div className="text-[11px] opacity-80 mt-0.5">
-                    {difference === 0
-                      ? 'لا توجد فروقات مالية'
-                      : difference > 0
-                      ? `فائض نقدي قدره ${formatCurrency(difference)}`
-                      : `عجز نقدي قدره ${formatCurrency(Math.abs(difference))}`}
-                  </div>
-                </div>
-              </div>
-              <span className="font-mono font-black text-base">{formatCurrency(difference)}</span>
-            </div>
-          )}
-        </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+              ملاحظات التسوية اليومية:
+            </label>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()))}
+              placeholder="أدخل أي ملاحظات إضافية على وردية اليوم..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
+            />
+          </div>
 
-        {/* Right Col: Closing Action Form */}
-        <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-          <h3 className="text-sm font-black text-slate-100 pb-2 border-b border-slate-800">
-            تأكيد الجرد واعتماد الإغلاق
-          </h3>
-
-          <form onSubmit={handlePerformClosing} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-200 mb-1.5">
-                مبلغ الجرد الفعلي للنقدية (عد الكاش الحاضر) <span className="text-rose-400">*</span>:
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  value={actualCashInput}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => {
-                    let val = e.target.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
-                    val = val.replace(/[^0-9.]/g, '');
-                    const parts = val.split('.');
-                    if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                    if (val.startsWith('0') && val.length > 1 && val[1] !== '.') {
-                      val = val.replace(/^0+/, '');
-                    }
-                    if (val === '') val = '0';
-                    setActualCashInput(val);
-                  }}
-                  placeholder={systemCalculatedBalance.toString()}
-                  className="w-full bg-slate-950 border border-amber-500/60 rounded-xl px-3.5 py-3 text-lg font-black font-mono text-amber-400 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setActualCashInput(systemCalculatedBalance.toString())}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-2 py-1 rounded"
-                >
-                  مطابق للدفتري
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                طريقة معالجة الرصيد بعد الإغلاق:
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer text-xs">
-                  <input
-                    type="radio"
-                    name="closing_type"
-                    checked={closingType === 'carry_over'}
-                    onChange={() => setClosingType('carry_over')}
-                    className="text-amber-500 focus:ring-0"
-                  />
-                  <div>
-                    <span className="font-bold text-slate-200 block">
-                      إبقاء النقدية بالدرج (ترحيل كـ Opening Balance)
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      يظل المبلغ بالدرج كعهدة تشغيل لليوم التالي
-                    </span>
-                  </div>
-                </label>
-
-                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-xl border border-slate-800 cursor-pointer text-xs">
-                  <input
-                    type="radio"
-                    name="closing_type"
-                    checked={closingType === 'payout_to_main'}
-                    onChange={() => setClosingType('payout_to_main')}
-                    className="text-amber-500 focus:ring-0"
-                  />
-                  <div>
-                    <span className="font-bold text-slate-200 block">
-                      توريد وتصفير الدرج (توريد للخزينة الرئيسية)
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      يتم سحب النقدية بالكامل ويبدأ اليوم التالي بصفر
-                    </span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1">
-                ملاحظات التسوية وأسباب الفروقات:
-              </label>
-              <textarea
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()))}
-                placeholder="أدخل أي ملاحظات على الوردية أو تبرير العجز/الزيادة"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-
+          <div className="pt-2 border-t border-slate-800 flex justify-end">
             <button
               type="submit"
-              disabled={isSubmitting || actualCashInput === ''}
-              className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg transition-all ${
-                isSubmitting || actualCashInput === '' ? 'opacity-50 cursor-not-allowed' : ''
+              disabled={isSubmitting}
+              className={`px-8 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg transition-all ${
+                isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               <Lock className="w-4 h-4" />
               <span>اعتماد الإغلاق والتسوية اليومية</span>
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
 
       {/* Historical Closings Archive */}

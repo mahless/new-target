@@ -349,32 +349,7 @@ export const OperationsCenter: React.FC = () => {
         </div>
       </div>
 
-      {/* Fast Shortcuts Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button
-          onClick={() => setActiveTab('expenses')}
-          className="flex items-center justify-center gap-2 p-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 transition-all"
-        >
-          <Receipt className="w-4 h-4 text-rose-400" />
-          <span>صرف مصروف نقدي</span>
-        </button>
 
-        <button
-          onClick={() => setActiveTab('distributors')}
-          className="flex items-center justify-center gap-2 p-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 transition-all"
-        >
-          <Users className="w-4 h-4 text-sky-400" />
-          <span>توريد كاش من موزع</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('transfers')}
-          className="flex items-center justify-center gap-2 p-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 transition-all"
-        >
-          <Building className="w-4 h-4 text-emerald-400" />
-          <span>تحويل نقدية بين الفروع</span>
-        </button>
-      </div>
 
       {/* Recent Activity Table */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm">

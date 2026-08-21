@@ -48,14 +48,14 @@ export const TreasuryView: React.FC = () => {
   );
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  // Employee Drawers Breakdown for current selected branch
+  // Employee Drawers Breakdown for all registered active employees
   const employeeDrawers = useMemo(() => {
-    const targetBranchId = selectedBranchId === 'all' ? (activeBranch?.id || '') : selectedBranchId;
-    const branchEmps = employees.filter(e => e.is_active && (!e.branch_id || e.branch_id === targetBranchId || selectedBranchId === 'all'));
+    const targetBranchId = selectedBranchId === 'all' ? undefined : selectedBranchId;
+    const allActiveEmps = employees.filter(e => e.is_active);
 
-    return branchEmps.map(emp => {
-      const empLedger = storage.getLedger(targetBranchId || undefined, emp.id);
-      const balance = storage.getEmployeeDrawerBalance(emp.id, targetBranchId || undefined);
+    return allActiveEmps.map(emp => {
+      const empLedger = storage.getLedger(targetBranchId, emp.id);
+      const balance = storage.getEmployeeDrawerBalance(emp.id, targetBranchId);
       const today = new Date().toISOString().split('T')[0];
       const todayLedger = empLedger.filter(l => l.created_at.startsWith(today));
 
@@ -75,7 +75,7 @@ export const TreasuryView: React.FC = () => {
         transactionsCount: empLedger.length,
       };
     });
-  }, [employees, selectedBranchId, activeBranch, ledger]);
+  }, [employees, selectedBranchId, ledger]);
 
   // Multi-branch stats
   const branchSummaries = useMemo(() => {
@@ -212,31 +212,34 @@ export const TreasuryView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Active Employee Drawer Card */}
-          <div className="bg-slate-950 px-4 py-2 rounded-xl border border-amber-500/30 text-right">
-            <div className="flex items-center gap-1.5 justify-end">
-              <User className="w-3 h-3 text-amber-400" />
-              <span className="text-[10px] text-slate-400 font-bold">
-                عهدة {activeEmployee?.name || 'الموظف'}
+          {/* Total All Branches / Single Branch Drawer Card */}
+          {activeEmployee?.role === 'manager' ? (
+            <div className="bg-slate-950 px-4 py-2 rounded-xl border border-emerald-500/40 text-right shadow-sm">
+              <div className="flex items-center gap-1.5 justify-end">
+                <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[10px] text-slate-400 font-bold">
+                  إجمالي كاش الفروع
+                </span>
+              </div>
+              <span className="text-base font-black text-emerald-400 font-mono">
+                {formatCurrency(
+                  branches.reduce((sum, b) => sum + storage.getBranchDrawerBalance(b.id), 0)
+                )}
               </span>
             </div>
-            <span className="text-base font-black text-amber-400 font-mono">
-              {formatCurrency(employeeDrawerBalance)}
-            </span>
-          </div>
-
-          {/* Branch Total Drawer Card */}
-          <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-right">
-            <div className="flex items-center gap-1.5 justify-end">
-              <Building2 className="w-3 h-3 text-emerald-400" />
-              <span className="text-[10px] text-slate-400 font-bold">
-                إجمالي خزينة {activeBranch?.name || 'الفرع'}
+          ) : (
+            <div className="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-right">
+              <div className="flex items-center gap-1.5 justify-end">
+                <Building2 className="w-3 h-3 text-emerald-400" />
+                <span className="text-[10px] text-slate-400 font-bold">
+                  إجمالي خزينة {activeBranch?.name || 'الفرع'}
+                </span>
+              </div>
+              <span className="text-base font-black text-emerald-400 font-mono">
+                {formatCurrency(branchDrawerBalance)}
               </span>
             </div>
-            <span className="text-base font-black text-emerald-400 font-mono">
-              {formatCurrency(branchDrawerBalance)}
-            </span>
-          </div>
+          )}
         </div>
       </div>
 
@@ -246,7 +249,7 @@ export const TreasuryView: React.FC = () => {
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-amber-400" />
             <h3 className="text-sm font-black text-slate-100">
-              خزن وعهد الموظفين المستقلة بالفرع
+              خزن وعهد جميع الموظفين المستقلة
             </h3>
             <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-amber-400">
               {employeeDrawers.length} موظف

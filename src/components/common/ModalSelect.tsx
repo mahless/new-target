@@ -68,8 +68,25 @@ export const ModalSelect: React.FC<ModalSelectProps> = ({
 
   const IconComp = selectedOption?.icon;
 
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [dropdownAlign, setDropdownAlign] = useState<'right' | 'left'>('right');
+
+  const handleOpenToggle = () => {
+    if (disabled) return;
+    if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      // If closing to left edge in RTL or near edge
+      if (rect.left < 250) {
+        setDropdownAlign('left');
+      } else {
+        setDropdownAlign('right');
+      }
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
-    <div className={`w-full relative ${className}`}>
+    <div ref={containerRef} className={`w-full relative ${className}`}>
       {label && (
         <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
           <span>
@@ -82,9 +99,7 @@ export const ModalSelect: React.FC<ModalSelectProps> = ({
         id={id}
         type="button"
         disabled={disabled}
-        onClick={() => {
-          if (!disabled) setIsOpen(!isOpen);
-        }}
+        onClick={handleOpenToggle}
         className={`w-full flex items-center justify-between gap-3 bg-slate-950 border ${
           selectedOption ? 'border-slate-700 text-slate-100' : 'border-slate-800 text-slate-400'
         } rounded-xl px-3.5 py-2.5 text-xs text-right transition-all hover:border-amber-500/50 hover:bg-slate-900/80 focus:outline-none focus:ring-2 focus:ring-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed ${buttonClassName}`}
@@ -122,8 +137,12 @@ export const ModalSelect: React.FC<ModalSelectProps> = ({
             }}
           />
 
-          {/* Absolute Dropdown Panel */}
-          <div className="absolute left-0 right-0 z-50 mt-1.5 p-3.5 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl space-y-3 max-h-[280px] flex flex-col">
+          {/* Absolute Dropdown Panel with Smart Alignment & Boundaries */}
+          <div
+            className={`absolute z-50 mt-1.5 p-3.5 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl space-y-3 max-h-[320px] min-w-full w-max max-w-[calc(100vw-2rem)] flex flex-col ${
+              dropdownAlign === 'left' ? 'left-0' : 'right-0'
+            }`}
+          >
             {searchable && options.length > 4 && (
               <div className="relative shrink-0">
                 <input
@@ -173,17 +192,17 @@ export const ModalSelect: React.FC<ModalSelectProps> = ({
                             <OptIcon className="w-3.5 h-3.5" />
                           </div>
                         )}
-                        <div className="min-w-0 flex-1">
+                        <div className="flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-xs text-slate-100">{opt.label}</span>
+                            <span className="font-bold text-xs text-slate-100 whitespace-nowrap">{opt.label}</span>
                             {opt.badge && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700 whitespace-nowrap">
                                 {opt.badge}
                               </span>
                             )}
                           </div>
                           {opt.sublabel && (
-                            <p className="text-[10px] text-slate-400 mt-0.5 truncate">{opt.sublabel}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap">{opt.sublabel}</p>
                           )}
                         </div>
                       </div>

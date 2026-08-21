@@ -39,34 +39,58 @@ export const ReportsView: React.FC = () => {
     ledger,
   } = useApp();
 
-  const [dateRange, setDateRange] = useState<'all' | 'today' | 'month'>('all');
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'custom'>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
 
   // Filter orders by date & branch
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       if (selectedBranchId !== 'all' && o.creation_branch_id !== selectedBranchId) return false;
+      const orderTime = new Date(o.created_at).getTime();
+
       if (dateRange === 'today') {
         const orderDate = new Date(o.created_at).toDateString();
         const today = new Date().toDateString();
         if (orderDate !== today) return false;
+      } else if (dateRange === 'custom') {
+        if (startDate) {
+          const start = new Date(startDate).setHours(0, 0, 0, 0);
+          if (orderTime < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate).setHours(23, 59, 59, 999);
+          if (orderTime > end) return false;
+        }
       }
       return true;
     });
-  }, [orders, selectedBranchId, dateRange]);
+  }, [orders, selectedBranchId, dateRange, startDate, endDate]);
 
   // Filter expenses
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
       if (selectedBranchId !== 'all' && e.branch_id !== selectedBranchId) return false;
+      const expTime = new Date(e.created_at).getTime();
+
       if (dateRange === 'today') {
         const expDate = new Date(e.created_at).toDateString();
         const today = new Date().toDateString();
         if (expDate !== today) return false;
+      } else if (dateRange === 'custom') {
+        if (startDate) {
+          const start = new Date(startDate).setHours(0, 0, 0, 0);
+          if (expTime < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate).setHours(23, 59, 59, 999);
+          if (expTime > end) return false;
+        }
       }
       return true;
     });
-  }, [expenses, selectedBranchId, dateRange]);
+  }, [expenses, selectedBranchId, dateRange, startDate, endDate]);
 
   // Core Financial Matrix Calculations
   const totalGrossRevenue = useMemo(() => {
@@ -196,9 +220,33 @@ export const ReportsView: React.FC = () => {
             options={[
               { value: 'all', label: 'كل الفترات السابقة' },
               { value: 'today', label: 'حركات اليوم فقط' },
+              { value: 'custom', label: 'فترة مخصصة (من - إلى)' },
             ]}
             buttonClassName="!py-2 !text-xs"
           />
+
+          {dateRange === 'custom' && (
+            <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800 animate-in fade-in duration-200">
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-slate-400 font-bold">من:</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-100 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] text-slate-400 font-bold">إلى:</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-100 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
 
           <button
             onClick={() => window.print()}
@@ -213,7 +261,7 @@ export const ReportsView: React.FC = () => {
       {/* Core P&L Financial Cards (Real Net Profit Formula) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">إجمالي إيرادات الخدمات (Gross)</div>
+          <div className="text-xs text-slate-400 font-semibold">إجمالي الخدمات (Gross)</div>
           <div className="text-2xl font-black text-slate-100 font-mono tracking-tight mt-1">
             {formatCurrency(totalGrossRevenue)}
           </div>
@@ -227,11 +275,11 @@ export const ReportsView: React.FC = () => {
           <div className="text-2xl font-black text-amber-400 font-mono tracking-tight mt-1">
             {formatCurrency(totalExternalOfficesCost)}
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">تكلفة مباشرة للتنفيذ الخارجي</p>
+          <p className="text-[11px] text-slate-500 mt-1">تكلفة للتنفيذ الخارجي</p>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">المصروفات التشغيلية المباشرة</div>
+          <div className="text-xs text-slate-400 font-semibold">المصروفات</div>
           <div className="text-2xl font-black text-rose-400 font-mono tracking-tight mt-1">
             {formatCurrency(totalOperatingExpenses)}
           </div>
@@ -241,15 +289,12 @@ export const ReportsView: React.FC = () => {
         {/* Real Net Profit Card */}
         <div className="bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-2 border-emerald-500/40 rounded-2xl p-4 shadow-lg shadow-emerald-500/5">
           <div className="text-xs text-emerald-300 font-bold flex items-center justify-between">
-            <span>صافي الربح التشغيلي الحقيقي</span>
+            <span>صافي الربح</span>
             <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight mt-1">
             {formatCurrency(netOperatingProfit)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1">
-            (الإيرادات - تكاليف المكاتب - المصروفات)
-          </p>
         </div>
       </div>
 
@@ -258,7 +303,7 @@ export const ReportsView: React.FC = () => {
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
           <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
             <Wallet className="w-4 h-4 text-emerald-400" />
-            <span>السيولة النقدية المحصلة (كاش)</span>
+            <span> النقدية المحصلة (كاش)</span>
           </div>
           <div className="text-xl font-black text-emerald-400 font-mono">
             {formatCurrency(cashCollectedTotal)}
@@ -269,7 +314,7 @@ export const ReportsView: React.FC = () => {
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
           <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
             <CreditCard className="w-4 h-4 text-sky-400" />
-            <span>التحصيلات الإلكترونية (InstaPay / محافظ)</span>
+            <span> (InstaPay / محافظ)</span>
           </div>
           <div className="text-xl font-black text-sky-400 font-mono">
             {formatCurrency(electronicCollectedTotal)}
@@ -280,7 +325,7 @@ export const ReportsView: React.FC = () => {
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
           <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
             <DollarSign className="w-4 h-4 text-rose-400" />
-            <span>متبقيات مستحقة طرف العملاء</span>
+            <span>متبقيات علي العملاء</span>
           </div>
           <div className="text-xl font-black text-rose-400 font-mono">
             {formatCurrency(totalUnpaidRemaining)}
@@ -295,7 +340,7 @@ export const ReportsView: React.FC = () => {
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
           <h3 className="text-sm font-black text-slate-100 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-amber-400" />
-            <span>مقارنة الأداء والسيولة عبر الفروع</span>
+            <span>مقارنة أداء الفروع</span>
           </h3>
 
           <div className="overflow-x-auto">

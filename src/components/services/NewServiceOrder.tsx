@@ -240,40 +240,10 @@ export const NewServiceOrder: React.FC = () => {
       return;
     }
 
-    // 1. Core Validations
-    if (!customerName.trim()) {
-      showToast('error', 'حقل مطلوب ناقص', 'يرجى إدخال اسم العميل بشكل صحيح.');
-      document.getElementById('order-customer-name-input')?.focus();
-      return;
-    }
-    if (!customerPhone.trim()) {
-      showToast('error', 'حقل مطلوب ناقص', 'يرجى إدخال رقم هاتف العميل.');
-      document.getElementById('order-customer-phone-input')?.focus();
-      return;
-    }
-    if (!customerNationalId.trim() || customerNationalId.trim().length !== 14) {
-      showToast('error', 'الرقم القومي غير صحيح', 'يرجى إدخال الرقم القومي للعميل المكون من 14 رقماً بالكامل.');
-      document.getElementById('order-customer-nid-input')?.focus();
-      return;
-    }
+    // 1. Core Validations (All fields are optional)
     if (!selectedServiceId) {
       showToast('error', 'اختيار الخدمة', 'يرجى اختيار الخدمة الحكومية المطلوبة.');
       return;
-    }
-
-    // Dynamic Custom Fields Validation
-    if (currentService?.fields_config) {
-      for (const field of currentService.fields_config) {
-        if (field.required) {
-          const val = customFieldsData[field.id];
-          if (val === undefined || val === null || (typeof val === 'string' && !val.trim())) {
-            showToast('error', 'حقل خدمة مطلوب', `يرجى إكمال الحقل المطلوب للخدمة: (${field.label})`);
-            const elem = document.getElementById(`custom-field-${field.id}`);
-            if (elem) elem.focus();
-            return;
-          }
-        }
-      }
     }
 
     if (calculatedServicePrice <= 0 && customPriceOverride === '') {
@@ -456,15 +426,14 @@ export const NewServiceOrder: React.FC = () => {
             {/* Name */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                اسم العميل ثلاثي / رباعي <span className="text-rose-400">*</span>:
+                اسم العميل:
               </label>
               <input
                 id="order-customer-name-input"
                 type="text"
-                required
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()))}
-                placeholder="أدخل اسم العميل كما في المستند"
+                placeholder="أدخل اسم العميل"
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
               />
             </div>
@@ -472,13 +441,12 @@ export const NewServiceOrder: React.FC = () => {
             {/* Phone with Auto-search */}
             <div className="relative">
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                رقم الهاتف <span className="text-rose-400">*</span>:
+                رقم الهاتف:
               </label>
               <div className="relative">
                 <input
                   id="order-customer-phone-input"
                   type="tel"
-                  required
                   dir="rtl"
                   value={customerPhone}
                   onChange={handlePhoneChange}
@@ -516,13 +484,12 @@ export const NewServiceOrder: React.FC = () => {
             {/* National ID */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                الرقم القومي (14 رقم) <span className="text-rose-400">*</span>:
+                الرقم القومي:
               </label>
               <div className="relative">
                 <input
                   id="order-customer-nid-input"
                   type="text"
-                  required
                   maxLength={14}
                   value={customerNationalId}
                   onChange={(e) => setCustomerNationalId(e.target.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()))}
@@ -572,7 +539,7 @@ export const NewServiceOrder: React.FC = () => {
             {/* Speeds selector */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                سرعة التنفيذ المطلوبة <span className="text-rose-400">*</span>:
+                سرعة التنفيذ:
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {availableSpeeds.map(speed => (
