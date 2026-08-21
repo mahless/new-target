@@ -73,6 +73,19 @@ function saveLocal<T>(key: string, value: T): void {
   }
 }
 
+// Safe Merge: Keeps local items if they exist locally but not remotely (preventing data loss on failed pushes)
+function safeMerge<T extends { id: string; created_at?: string }>(remoteData: T[], localKey: string): T[] {
+  const currentLocal = loadLocal<T[]>(localKey, []);
+  const merged = [...remoteData];
+  currentLocal.forEach(localItem => {
+    if (!merged.find(m => m.id === localItem.id)) {
+      merged.push(localItem);
+    }
+  });
+  return merged.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+}
+
+
 // Helper to ensure any custom string ID (e.g. b1-dokki) is formatted as a valid UUID for Postgres UUID columns
 export function toValidUuid(val: string | null | undefined): string | null {
   if (!val) return null;
@@ -512,7 +525,7 @@ export const supabaseSyncService = {
         created_at: b.created_at,
         updated_at: b.updated_at,
       }));
-      saveLocal(STORAGE_KEYS.BRANCHES, localBranches);
+      saveLocal(STORAGE_KEYS.BRANCHES, safeMerge(localBranches, STORAGE_KEYS.BRANCHES));
       details['branches'] = { pushed: 0, pulled: dbBranches.length };
 
       // 2. Pull employees
@@ -532,7 +545,7 @@ export const supabaseSyncService = {
         is_active: e.is_active,
         created_at: e.created_at,
       }));
-      saveLocal(STORAGE_KEYS.EMPLOYEES, localEmployees);
+      saveLocal(STORAGE_KEYS.EMPLOYEES, safeMerge(localEmployees, STORAGE_KEYS.EMPLOYEES));
       details['employees'] = { pushed: 0, pulled: dbEmployees.length };
 
       // 3. Pull services
@@ -548,7 +561,7 @@ export const supabaseSyncService = {
         is_active: s.is_active,
         created_at: s.created_at,
       }));
-      saveLocal(STORAGE_KEYS.SERVICES, localServices);
+      saveLocal(STORAGE_KEYS.SERVICES, safeMerge(localServices, STORAGE_KEYS.SERVICES));
       details['services'] = { pushed: 0, pulled: dbServices.length };
 
       // 4. Pull customers
@@ -561,7 +574,7 @@ export const supabaseSyncService = {
         total_orders: c.total_orders,
         created_at: c.created_at,
       }));
-      saveLocal(STORAGE_KEYS.CUSTOMERS, localCustomers);
+      saveLocal(STORAGE_KEYS.CUSTOMERS, safeMerge(localCustomers, STORAGE_KEYS.CUSTOMERS));
       details['customers'] = { pushed: 0, pulled: dbCustomers.length };
 
       // 5. Pull distributors
@@ -579,7 +592,7 @@ export const supabaseSyncService = {
         balance_due: Number(d.balance_due ?? 0),
         created_at: d.created_at,
       }));
-      saveLocal(STORAGE_KEYS.DISTRIBUTORS, localDistributors);
+      saveLocal(STORAGE_KEYS.DISTRIBUTORS, safeMerge(localDistributors, STORAGE_KEYS.DISTRIBUTORS));
       details['distributors'] = { pushed: 0, pulled: dbDistributors.length };
 
       // 6. Pull external offices
@@ -597,7 +610,7 @@ export const supabaseSyncService = {
         total_cost_paid: Number(o.total_cost_paid ?? 0),
         created_at: o.created_at,
       }));
-      saveLocal(STORAGE_KEYS.EXTERNAL_OFFICES, localOffices);
+      saveLocal(STORAGE_KEYS.EXTERNAL_OFFICES, safeMerge(localOffices, STORAGE_KEYS.EXTERNAL_OFFICES));
       details['external_offices'] = { pushed: 0, pulled: dbOffices.length };
 
       // 7. Pull expense categories
@@ -608,7 +621,7 @@ export const supabaseSyncService = {
         is_active: c.is_active,
         created_at: c.created_at,
       }));
-      saveLocal(STORAGE_KEYS.EXPENSE_CATEGORIES, localCategories);
+      saveLocal(STORAGE_KEYS.EXPENSE_CATEGORIES, safeMerge(localCategories, STORAGE_KEYS.EXPENSE_CATEGORIES));
       details['expense_categories'] = { pushed: 0, pulled: dbCategories.length };
 
       // 8. Pull service orders
@@ -645,7 +658,7 @@ export const supabaseSyncService = {
         created_at: o.created_at,
         updated_at: o.updated_at,
       }));
-      saveLocal(STORAGE_KEYS.ORDERS, localOrders);
+      saveLocal(STORAGE_KEYS.ORDERS, safeMerge(localOrders, STORAGE_KEYS.ORDERS));
       details['service_orders'] = { pushed: 0, pulled: dbOrders.length };
 
       // 9. Pull payments
@@ -663,7 +676,7 @@ export const supabaseSyncService = {
         idempotency_key: p.idempotency_key,
         created_at: p.created_at,
       }));
-      saveLocal(STORAGE_KEYS.PAYMENTS, localPayments);
+      saveLocal(STORAGE_KEYS.PAYMENTS, safeMerge(localPayments, STORAGE_KEYS.PAYMENTS));
       details['payments'] = { pushed: 0, pulled: dbPayments.length };
 
       // 10. Pull cash ledger
@@ -681,7 +694,7 @@ export const supabaseSyncService = {
         notes: l.notes || undefined,
         created_at: l.created_at,
       }));
-      saveLocal(STORAGE_KEYS.LEDGER, localLedger);
+      saveLocal(STORAGE_KEYS.LEDGER, safeMerge(localLedger, STORAGE_KEYS.LEDGER));
       details['cash_ledger'] = { pushed: 0, pulled: dbLedger.length };
 
       // 11. Pull distributor transactions
@@ -699,7 +712,7 @@ export const supabaseSyncService = {
         balance_after: t.balance_after ? Number(t.balance_after) : undefined,
         created_at: t.created_at,
       }));
-      saveLocal(STORAGE_KEYS.DISTRIBUTOR_TXNS, localDistTxns);
+      saveLocal(STORAGE_KEYS.DISTRIBUTOR_TXNS, safeMerge(localDistTxns, STORAGE_KEYS.DISTRIBUTOR_TXNS));
       details['distributor_transactions'] = { pushed: 0, pulled: dbDistTxns.length };
 
       // 12. Pull expenses
@@ -717,7 +730,7 @@ export const supabaseSyncService = {
         idempotency_key: e.idempotency_key,
         created_at: e.created_at,
       }));
-      saveLocal(STORAGE_KEYS.EXPENSES, localExpenses);
+      saveLocal(STORAGE_KEYS.EXPENSES, safeMerge(localExpenses, STORAGE_KEYS.EXPENSES));
       details['expenses'] = { pushed: 0, pulled: dbExpenses.length };
 
       // 13. Pull branch transfers
@@ -735,7 +748,7 @@ export const supabaseSyncService = {
         idempotency_key: t.idempotency_key,
         created_at: t.created_at,
       }));
-      saveLocal(STORAGE_KEYS.TRANSFERS, localTransfers);
+      saveLocal(STORAGE_KEYS.TRANSFERS, safeMerge(localTransfers, STORAGE_KEYS.TRANSFERS));
       details['branch_transfers'] = { pushed: 0, pulled: dbTransfers.length };
 
       // 14. Pull daily closings
@@ -760,7 +773,7 @@ export const supabaseSyncService = {
         notes: c.notes || undefined,
         created_at: c.created_at,
       }));
-      saveLocal(STORAGE_KEYS.CLOSINGS, localClosings);
+      saveLocal(STORAGE_KEYS.CLOSINGS, safeMerge(localClosings, STORAGE_KEYS.CLOSINGS));
       details['daily_closings'] = { pushed: 0, pulled: dbClosings.length };
 
       // 15. Pull audit logs
@@ -780,7 +793,7 @@ export const supabaseSyncService = {
         metadata: a.metadata || {},
         created_at: a.created_at,
       }));
-      saveLocal(STORAGE_KEYS.AUDIT_LOGS, localAuditLogs);
+      saveLocal(STORAGE_KEYS.AUDIT_LOGS, safeMerge(localAuditLogs, STORAGE_KEYS.AUDIT_LOGS));
       details['audit_logs'] = { pushed: 0, pulled: dbAuditLogs.length };
 
       // 16. Pull idempotency cache
