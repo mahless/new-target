@@ -517,6 +517,18 @@ export const supabaseSyncService = {
 
       // 1. Pull branches
       const dbBranches = await fetchTable('branches');
+      // 2. Pull employees
+      const dbEmployees = await fetchTable('employees');
+
+      // Detect Database Reset (Wipe)
+      // If core config tables are completely empty, the user ran reset_all_data.sql.
+      // We must wipe local data so safeMerge doesn't re-upload old cached data.
+      if (dbBranches.length === 0 && dbEmployees.length === 0) {
+        console.warn('[Sync] Detected empty core tables. Assuming DB reset via SQL. Wiping local data to sync.');
+        clearAllLocalData();
+        return { success: true, message: 'تم اكتشاف تصفير قاعدة البيانات السحابية. تم مسح البيانات المحلية بنجاح.' };
+      }
+
       const localBranches = dbBranches.map(b => ({
         id: b.id,
         name: b.name,
@@ -530,8 +542,6 @@ export const supabaseSyncService = {
       saveLocal(STORAGE_KEYS.BRANCHES, safeMerge(localBranches, STORAGE_KEYS.BRANCHES));
       details['branches'] = { pushed: 0, pulled: dbBranches.length };
 
-      // 2. Pull employees
-      const dbEmployees = await fetchTable('employees');
       const localEmployees = dbEmployees.map(e => ({
         id: e.id,
         name: e.name,
