@@ -341,11 +341,15 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 <span className="text-sm font-bold font-mono text-emerald-400">
                   {formatCurrency(order.total_paid)}
                 </span>
-                <div className="text-[10px] font-mono text-slate-400 mt-0.5 space-x-1 space-x-reverse">
-                  <span className="text-emerald-400">كاش: {formatCurrency(order.cash_amount ?? orderPayments.reduce((s, p) => s + (p.cash_amount || 0), 0))}</span>
-                  { (order.electronic_amount ?? orderPayments.reduce((s, p) => s + (p.electronic_amount || 0), 0)) > 0 && (
-                    <span className="text-sky-400"> • إلكتروني: {formatCurrency(order.electronic_amount ?? orderPayments.reduce((s, p) => s + (p.electronic_amount || 0), 0))}</span>
-                  )}
+                <div className="text-[10px] font-mono mt-1 pt-1 border-t border-slate-800/80 flex flex-col gap-0.5">
+                  <div className="flex justify-between items-center text-emerald-400 font-semibold">
+                    <span>كاش:</span>
+                    <span>{formatCurrency(orderPayments.length > 0 ? orderPayments.reduce((s, p) => s + Number(p.cash_amount || 0), 0) : (order.cash_amount || 0))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sky-400 font-semibold">
+                    <span>إلكتروني:</span>
+                    <span>{formatCurrency(orderPayments.length > 0 ? orderPayments.reduce((s, p) => s + Number(p.electronic_amount || 0), 0) : (order.electronic_amount || 0))}</span>
+                  </div>
                 </div>
               </div>
               <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">

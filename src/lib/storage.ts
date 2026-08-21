@@ -857,6 +857,8 @@ export class ResilientStorageService {
     const oldRemaining = order.remaining;
     order.total_paid = Number((order.total_paid + paymentTotal).toFixed(2));
     order.remaining = Number((order.price - order.total_paid).toFixed(2));
+    order.cash_amount = Number(((order.cash_amount || 0) + cash).toFixed(2));
+    order.electronic_amount = Number(((order.electronic_amount || 0) + electronic).toFixed(2));
     order.updated_at = now;
     orders[orderIndex] = order;
     save(STORAGE_KEYS.ORDERS, orders);
