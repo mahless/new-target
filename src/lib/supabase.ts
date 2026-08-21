@@ -45,6 +45,7 @@ const STORAGE_KEYS = {
   DISTRIBUTORS: 'esnad_distributors_v1',
   DISTRIBUTOR_TXNS: 'esnad_distributor_txns_v1',
   EXTERNAL_OFFICES: 'esnad_external_offices_v1',
+  EXTERNAL_OFFICE_TXNS: 'esnad_external_office_txns_v1',
   EXPENSE_CATEGORIES: 'esnad_expense_categories_v1',
   EXPENSES: 'esnad_expenses_v1',
   TRANSFERS: 'esnad_transfers_v1',
@@ -517,17 +518,6 @@ export const supabaseSyncService = {
 
       // 1. Pull branches
       const dbBranches = await fetchTable('branches');
-      // 2. Pull employees
-      const dbEmployees = await fetchTable('employees');
-
-      // Detect Database Reset (Wipe)
-      // If core config tables are completely empty, the user ran reset_all_data.sql.
-      // We must wipe local data so safeMerge doesn't re-upload old cached data.
-      if (dbBranches.length === 0 && dbEmployees.length === 0) {
-        console.warn('[Sync] Detected empty core tables. Assuming DB reset via SQL. Wiping local data to sync.');
-        clearAllLocalData();
-        return { success: true, message: 'تم اكتشاف تصفير قاعدة البيانات السحابية. تم مسح البيانات المحلية بنجاح.' };
-      }
 
       const localBranches = dbBranches.map(b => ({
         id: b.id,
@@ -542,6 +532,8 @@ export const supabaseSyncService = {
       saveLocal(STORAGE_KEYS.BRANCHES, safeMerge(localBranches, STORAGE_KEYS.BRANCHES));
       details['branches'] = { pushed: 0, pulled: dbBranches.length };
 
+      // 2. Pull employees
+      const dbEmployees = await fetchTable('employees');
       const localEmployees = dbEmployees.map(e => ({
         id: e.id,
         name: e.name,
@@ -636,8 +628,27 @@ export const supabaseSyncService = {
       saveLocal(STORAGE_KEYS.EXPENSE_CATEGORIES, safeMerge(localCategories, STORAGE_KEYS.EXPENSE_CATEGORIES));
       details['expense_categories'] = { pushed: 0, pulled: dbCategories.length };
 
-      // 8. Pull service orders
+      // 8. Pull service orders & 10. cash ledger (for wipe detection)
       const dbOrders = await fetchTable('service_orders');
+      const dbLedger = await fetchTable('cash_ledger');
+
+      // Detect Database Reset via SQL
+      // The reset_all_data.sql script deletes all service_orders and cash_ledger but keeps config.
+      const currentLocalOrders = loadLocal<any[]>(STORAGE_KEYS.ORDERS, []);
+      if (dbOrders.length === 0 && dbLedger.length === 0 && currentLocalOrders.length > 0) {
+        console.warn('[Sync] Detected empty transactional tables. Assuming DB reset via SQL. Wiping local transactions.');
+        saveLocal(STORAGE_KEYS.ORDERS, []);
+        saveLocal(STORAGE_KEYS.PAYMENTS, []);
+        saveLocal(STORAGE_KEYS.LEDGER, []);
+        saveLocal(STORAGE_KEYS.DISTRIBUTOR_TXNS, []);
+        saveLocal(STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, []);
+        saveLocal(STORAGE_KEYS.EXPENSES, []);
+        saveLocal(STORAGE_KEYS.TRANSFERS, []);
+        saveLocal(STORAGE_KEYS.CLOSINGS, []);
+        saveLocal(STORAGE_KEYS.AUDIT_LOGS, []);
+        saveLocal(STORAGE_KEYS.IDEMPOTENCY_CACHE, {});
+        return { success: true, message: 'تم اكتشاف تصفير قاعدة البيانات السحابية. تم مسح العمليات المحلية بنجاح.' };
+      }
       const localOrders = dbOrders.map(o => ({
         id: o.id,
         order_number: o.order_number,
@@ -691,8 +702,7 @@ export const supabaseSyncService = {
       saveLocal(STORAGE_KEYS.PAYMENTS, safeMerge(localPayments, STORAGE_KEYS.PAYMENTS));
       details['payments'] = { pushed: 0, pulled: dbPayments.length };
 
-      // 10. Pull cash ledger
-      const dbLedger = await fetchTable('cash_ledger');
+      // 10. Pull cash ledger (already fetched above for wipe detection)
       const localLedger = dbLedger.map(l => ({
         id: l.id,
         branch_id: l.branch_id,
