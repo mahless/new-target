@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Settings,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -31,7 +32,7 @@ interface NavItem {
 }
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, stats, isSidebarOpen, setIsSidebarOpen, activeEmployee } = useApp();
+  const { activeTab, setActiveTab, stats, isSidebarOpen, setIsSidebarOpen, activeEmployee, showToast } = useApp();
   const role = activeEmployee?.role || 'employee';
 
   const handleSelectTab = (tabId: NavigationTab) => {
@@ -39,6 +40,16 @@ export const Sidebar: React.FC = () => {
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('target_daily_session_active');
+    sessionStorage.removeItem('target_session_user_id');
+    sessionStorage.removeItem('target_session_date');
+    showToast('info', 'تم تسجيل الخروج', 'تم إنهاء الجلسة بنجاح.');
+    setTimeout(() => {
+      window.location.reload();
+    }, 200);
   };
 
   const navItems: NavItem[] = [
@@ -188,15 +199,32 @@ export const Sidebar: React.FC = () => {
           })}
         </div>
 
-        {/* Footer info pill */}
-        <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl mt-4">
-          <div className="flex items-center justify-between text-[11px] text-slate-400">
-            <span>حالة التشغيل</span>
-            <span className="text-emerald-400 font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              نشط
-            </span>
+        {/* Footer info pill & Red Logout Button */}
+        <div className="mt-4 space-y-2">
+          <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl">
+            <div className="flex items-center justify-between text-[11px] text-slate-400">
+              <span>حالة التشغيل</span>
+              <span className="text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                نشط
+              </span>
+            </div>
           </div>
+
+          <button
+            id="sidebar-logout-btn"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:border-rose-500/50 transition-all shadow-sm group"
+            title="تسجيل الخروج وإنهاء الجلسة اليومية"
+          >
+            <div className="flex items-center gap-2.5">
+              <LogOut className="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform" />
+              <span>تسجيل الخروج</span>
+            </div>
+            <span className="text-[10px] bg-rose-500/20 px-1.5 py-0.5 rounded text-rose-300 font-mono">
+              إغلاق
+            </span>
+          </button>
         </div>
       </aside>
     </>
