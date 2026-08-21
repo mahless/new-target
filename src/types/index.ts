@@ -126,6 +126,7 @@ export interface Payment {
 
 export type LedgerTransactionType =
   | 'customer_cash_payment'
+  | 'customer_refund'
   | 'distributor_payment'
   | 'distributor_supply'
   | 'expense'

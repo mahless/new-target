@@ -1,17 +1,23 @@
 -- ==============================================================================
--- منظومة إسناد المتكاملة لإدارة الخدمات الحكومية والتوثيقية | Esnad Multi-Branch System
--- Script: reset_all_data.sql (تصفير بيانات التشغيل والمستخدمين)
+-- منظومة تارجت لإدارة الخدمات الحكومية والتوثيقية | Target Multi-Branch System
+-- Script: reset_all_data.sql (تصفير بيانات التشغيل فقط)
 -- ------------------------------------------------------------------------------
--- WARNING & PURPOSE:
--- هذا السكربت يقوم بمسح جميع بيانات التشغيل والمستخدمين والعمليات المالية والحسابات
--- من جميع جداول التطبيق، مع الإبقاء على هيكل قاعدة البيانات كاملاً كما هو دون حذف أو تغيير
--- أي جدول (No DROP TABLE)، أو Schema، أو RLS Policies، أو Functions/Triggers، أو Indexes.
+-- PURPOSE:
+-- هذا السكربت يقوم بمسح جميع البيانات التشغيلية والمالية فقط
+-- مع الإبقاء التام على البيانات المرجعية الأساسية:
+--   ✓ الفروع (branches)
+--   ✓ الموظفين (employees)
+--   ✓ الموزعين وأرصدتهم (distributors)
+--   ✓ المكاتب الخارجية وأرصدتها (external_offices)
+--   ✓ كتالوج الخدمات (services)
+--   ✓ تصنيفات المصروفات (expense_categories)
+-- لا يتم DROP لأي جدول أو تغيير في الـ Schema أو RLS Policies أو Functions.
 -- ==============================================================================
 
 BEGIN;
 
 -- ------------------------------------------------------------------------------
--- 1. حركات دفتر الأستاذ والسجلات النقدية واللوجستية (Log & Ledger Tables)
+-- 1. سجلات الخزنة والحسابات والمدفوعات (Financial Ledger & Payments)
 -- ------------------------------------------------------------------------------
 DELETE FROM payments;
 DELETE FROM cash_ledger;
@@ -24,29 +30,62 @@ DELETE FROM audit_logs;
 DELETE FROM idempotency_keys;
 
 -- ------------------------------------------------------------------------------
--- 2. أوامر التشغيل والعملاء والكيانات التابعة (Service Orders & Operational Entities)
+-- 2. المعاملات والعملاء (Service Orders & Customers)
 -- ------------------------------------------------------------------------------
 DELETE FROM service_orders;
 DELETE FROM customers;
--- DELETE FROM distributors;
-DELETE FROM external_offices;
 
 -- ------------------------------------------------------------------------------
--- 3. الموظفون والفروع (Employees & Branches)
+-- 3. إعادة تصفير الأعمدة المالية للموزعين والمكاتب الخارجية
+--    (مع الإبقاء التام على أسمائهم وبياناتهم)
 -- ------------------------------------------------------------------------------
--- DELETE FROM employees;
--- DELETE FROM branches;
+
+DO $$
+BEGIN
+  -- 1) تصفير أعمدة جدول الموزعين الموجودة في الـ Database
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'distributors' AND column_name = 'balance') THEN
+    EXECUTE 'UPDATE distributors SET balance = 0';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'distributors' AND column_name = 'total_orders_value') THEN
+    EXECUTE 'UPDATE distributors SET total_orders_value = 0';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'distributors' AND column_name = 'total_supplied') THEN
+    EXECUTE 'UPDATE distributors SET total_supplied = 0';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'distributors' AND column_name = 'balance_due') THEN
+    EXECUTE 'UPDATE distributors SET balance_due = 0';
+  END IF;
+
+  -- 2) تصفير أعمدة جدول المكاتب الخارجية الموجودة في الـ Database
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'external_offices' AND column_name = 'balance') THEN
+    EXECUTE 'UPDATE external_offices SET balance = 0';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'external_offices' AND column_name = 'total_jobs_count') THEN
+    EXECUTE 'UPDATE external_offices SET total_jobs_count = 0';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'external_offices' AND column_name = 'total_cost_paid') THEN
+    EXECUTE 'UPDATE external_offices SET total_cost_paid = 0';
+  END IF;
+END $$;
 
 -- ------------------------------------------------------------------------------
--- 4. إبقاء دليل الخدمات الحكومية وتصنيفات المصروفات المرجعية (Master Reference Data)
--- ملاحظة: نحتفظ بدليل الخدمات وتصنيفات المصروفات المرجعية الأساسية لتسهيل البدء المباشر.
--- إذا رغبت في تفريغ دليل الخدمات وتصنيفات المصروفات أيضاً، يمكنك إلغاء التعليق أدناه:
--- DELETE FROM services;
--- DELETE FROM expense_categories;
+-- ✗ البيانات التالية محفوظة ولن تُحذف:
+-- ------------------------------------------------------------------------------
+-- الفروع              → branches
+-- الموظفون            → employees
+-- الموزعون            → distributors      (الأرصدة صُفِّرت أعلاه)
+-- المكاتب الخارجية   → external_offices   (الأرصدة صُفِّرت أعلاه)
+-- كتالوج الخدمات     → services
+-- تصنيفات المصروفات  → expense_categories
 -- ------------------------------------------------------------------------------
 
 COMMIT;
 
 -- ==============================================================================
--- تأكيد إتمام عملية تصفير البيانات بنجاح مع الاحتفاظ الكامل بهيكل قاعدة البيانات
+-- ✅ تم تصفير البيانات التشغيلية بنجاح مع الحفاظ على جميع البيانات المرجعية
 -- ==============================================================================

@@ -929,6 +929,206 @@ export class ResilientStorageService {
     return order;
   }
 
+  /**
+   * Atomic Order Cancellation with Full Financial Refund
+   * - Reverses cash ledger entries (customer_refund)
+   * - Reverses distributor debt if applicable
+   * - Reverses external office balance if applicable
+   * - Records full Audit log with refund breakdown
+   */
+  public cancelOrderWithRefund(
+    orderId: string,
+    refundCash: number,    // amount to refund as cash from drawer
+    refundElectronic: number, // amount to note as electronic refund (no drawer impact)
+    notes?: string,
+    employeeId?: string
+  ): ServiceOrder {
+    const orders = load<ServiceOrder[]>(STORAGE_KEYS.ORDERS, []);
+    const idx = orders.findIndex(o => o.id === orderId);
+    if (idx === -1) throw new Error('العملية غير موجودة في النظام');
+
+    const order = orders[idx];
+
+    // Guard: cannot cancel already-cancelled or delivered orders
+    if (order.status === 'cancelled') {
+      throw new Error('المعاملة ملغاة مسبقًا');
+    }
+    if (order.status === 'delivered') {
+      throw new Error('لا يمكن إلغاء معاملة تم تسليمها للعميل');
+    }
+
+    const branchId = order.creation_branch_id;
+    const empId = employeeId || this.getActiveEmployeeId();
+    const employees = this.getEmployees();
+    const emp = employees.find(e => e.id === empId);
+    const empName = emp?.name || 'موظف';
+    const now = new Date().toISOString();
+
+    const totalRefund = Number((refundCash + refundElectronic).toFixed(2));
+    const totalPaidSnapshot = order.total_paid;
+
+    // Validate refund amounts
+    if (totalRefund > order.total_paid) {
+      throw new Error(
+        `مبلغ الاسترداد (${totalRefund}) أكبر من إجمالي المدفوع (${order.total_paid})`
+      );
+    }
+
+    // 1. Cash Drawer Reversal — only for cash portion
+    if (refundCash > 0) {
+      const currentBalance = this.getBranchDrawerBalance(branchId);
+      if (refundCash > currentBalance) {
+        throw new Error(
+          `رصيد الخزنة (${currentBalance}) لا يكفي لاسترداد المبلغ النقدي (${refundCash}). يرجى التحقق من رصيد الخزنة.`
+        );
+      }
+      this.appendLedgerEntry(
+        branchId,
+        'customer_refund',
+        -refundCash, // negative = cash out
+        'ServiceOrder',
+        order.id,
+        `استرداد كاش للعميل ${order.customer_name} — إلغاء معاملة ${order.order_number}${notes ? ' | ' + notes : ''}`,
+        `refund-${orderId}-${Date.now()}`,
+        empId
+      );
+    }
+
+    // 2. Reverse Distributor Debt if linked
+    if (order.distributor_id) {
+      try {
+        this.recordDistributorTransaction(
+          order.distributor_id,
+          branchId,
+          empId,
+          -order.price, // reverse the full charge
+          'order_charge',
+          order.id,
+          `إلغاء وعكس قيد معاملة ${order.order_number} على الموزع`
+        );
+      } catch (_) {
+        // non-fatal — log only
+      }
+    }
+
+    // 3. Reverse External Office Balance if linked
+    if (order.external_office_id && order.external_office_cost > 0) {
+      try {
+        const offices = this.getExternalOffices();
+        const office = offices.find(o => o.id === order.external_office_id);
+        if (office) {
+          const txns = this.getExternalOfficeTransactions();
+          const reversedBalance = Number(((office.balance || 0) - order.external_office_cost).toFixed(2));
+          const reversalTxn: ExternalOfficeTransaction = {
+            id: `off-txn-rev-${Date.now()}`,
+            external_office_id: office.id,
+            branch_id: branchId,
+            employee_id: empId,
+            amount: -order.external_office_cost,
+            type: 'service_order_cost',
+            reference_id: order.id,
+            notes: `عكس تكلفة إلغاء معاملة ${order.order_number}`,
+            idempotency_key: `ext-rev-${orderId}`,
+            balance_after: reversedBalance,
+            created_at: now,
+          };
+          txns.unshift(reversalTxn);
+          save(STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, txns);
+          office.balance = reversedBalance;
+          this.saveExternalOffice(office);
+        }
+      } catch (_) {
+        // non-fatal — log only
+      }
+    }
+
+    // 4. Update Order: mark as cancelled, zero out payments
+    order.status = 'cancelled';
+    order.total_paid = 0;
+    order.remaining = order.price;
+    order.updated_at = now;
+    if (notes) {
+      order.notes = order.notes
+        ? `${order.notes}\n[${new Date().toLocaleTimeString('ar-EG-u-nu-latn')}] إلغاء: ${notes}`
+        : `إلغاء: ${notes}`;
+    }
+    orders[idx] = order;
+    save(STORAGE_KEYS.ORDERS, orders);
+
+    // 5. Audit Log
+    this.addAuditLog(
+      'إلغاء معاملة مع استرداد مالي',
+      'ServiceOrder',
+      order.id,
+      { status: 'active', totalPaid: totalPaidSnapshot },
+      {
+        status: 'cancelled',
+        refundCash,
+        refundElectronic,
+        totalRefund,
+        notes,
+      },
+      { employeeName: empName, branchId }
+    );
+
+    return order;
+  }
+
+  public updateOrderCustomer(
+    orderId: string,
+    customerData: {
+      name: string;
+      phone: string;
+      nationalId?: string;
+    },
+    employeeId?: string
+  ): ServiceOrder {
+    const orders = load<ServiceOrder[]>(STORAGE_KEYS.ORDERS, []);
+    const idx = orders.findIndex(o => o.id === orderId);
+    if (idx === -1) throw new Error('العملية غير موجودة');
+
+    const order = orders[idx];
+    const oldDetails = {
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      customer_national_id: order.customer_national_id,
+    };
+
+    order.customer_name = customerData.name.trim();
+    order.customer_phone = customerData.phone.trim();
+    order.customer_national_id = customerData.nationalId?.trim() || undefined;
+    order.updated_at = new Date().toISOString();
+    orders[idx] = order;
+    save(STORAGE_KEYS.ORDERS, orders);
+
+    // Also update customer registry if linked
+    if (order.customer_id) {
+      const customers = this.getCustomers();
+      const custIdx = customers.findIndex(c => c.id === order.customer_id);
+      if (custIdx >= 0) {
+        customers[custIdx].name = customerData.name.trim();
+        customers[custIdx].phone = customerData.phone.trim();
+        if (customerData.nationalId) customers[custIdx].national_id = customerData.nationalId.trim();
+        save(STORAGE_KEYS.CUSTOMERS, customers);
+      }
+    }
+
+    this.addAuditLog(
+      'تعديل بيانات العميل بالمعاملة',
+      'ServiceOrder',
+      order.id,
+      oldDetails,
+      {
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        customer_national_id: order.customer_national_id,
+      },
+      { employeeId: employeeId || this.getActiveEmployeeId() }
+    );
+
+    return order;
+  }
+
   public transferOrderExecutionBranch(
     orderId: string,
     targetBranchId: string,

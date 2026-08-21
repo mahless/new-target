@@ -146,7 +146,7 @@ export const supabaseSyncService = {
             email: e.email || null,
             phone: e.phone || null,
             pin_code: e.pin_code || e.password || '1234',
-            password_hash: e.password || null,
+            password: e.password || null,
             branch_id: toValidUuid(e.branch_id),
             default_branch_id: toValidUuid(e.default_branch_id),
             role: e.role || 'employee',
@@ -203,6 +203,10 @@ export const supabaseSyncService = {
             code: d.code,
             address: d.address || null,
             is_active: d.is_active ?? true,
+            balance: d.balance ?? 0,
+            total_orders_value: d.total_orders_value ?? 0,
+            total_supplied: d.total_supplied ?? 0,
+            balance_due: d.balance_due ?? 0,
             created_at: d.created_at,
           }))
         );
@@ -221,6 +225,9 @@ export const supabaseSyncService = {
             specialty: o.specialty || null,
             address: o.address || null,
             is_active: o.is_active ?? true,
+            balance: o.balance ?? 0,
+            total_jobs_count: o.total_jobs_count ?? 0,
+            total_cost_paid: o.total_cost_paid ?? 0,
             created_at: o.created_at,
           }))
         );
@@ -564,6 +571,10 @@ export const supabaseSyncService = {
         code: d.code,
         address: d.address || undefined,
         is_active: d.is_active,
+        balance: Number(d.balance ?? 0),
+        total_orders_value: Number(d.total_orders_value ?? 0),
+        total_supplied: Number(d.total_supplied ?? 0),
+        balance_due: Number(d.balance_due ?? 0),
         created_at: d.created_at,
       }));
       saveLocal(STORAGE_KEYS.DISTRIBUTORS, localDistributors);
@@ -579,6 +590,9 @@ export const supabaseSyncService = {
         specialty: o.specialty || undefined,
         address: o.address || undefined,
         is_active: o.is_active,
+        balance: Number(o.balance ?? 0),
+        total_jobs_count: Number(o.total_jobs_count ?? 0),
+        total_cost_paid: Number(o.total_cost_paid ?? 0),
         created_at: o.created_at,
       }));
       saveLocal(STORAGE_KEYS.EXTERNAL_OFFICES, localOffices);

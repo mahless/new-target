@@ -232,6 +232,7 @@ CREATE TABLE IF NOT EXISTS cash_ledger (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chk_ledger_type CHECK (transaction_type IN (
         'customer_cash_payment',
+        'customer_refund',
         'distributor_payment',
         'distributor_supply',
         'expense',
@@ -550,3 +551,20 @@ BEGIN
 EXCEPTION
     WHEN OTHERS THEN NULL;
 END $$;
+
+-- ------------------------------------------------------------------------------
+-- 7. MASTER REFERENCE SEED DATA (إدراج بنود المصروفات المرجعية في قاعدة البيانات)
+-- ------------------------------------------------------------------------------
+INSERT INTO expense_categories (id, name, is_active) VALUES
+  ('exp-cat-1', 'إيجارات ومقرات', true),
+  ('exp-cat-2', 'كهرباء ومرافق ومياه', true),
+  ('exp-cat-3', 'أدوات كتابية ومطبوعات', true),
+  ('exp-cat-4', 'انتقالات ومواصلات', true),
+  ('exp-cat-5', 'صيانة وأجهزة', true),
+  ('exp-cat-6', 'ضيافة ونثريات', true),
+  ('exp-cat-7', 'مصروفات حكومية ورسوم توثيق', true),
+  ('exp-cat-8', 'مصروفات متنوعة أخرى', true)
+ON CONFLICT (id) DO NOTHING;
+
+
+

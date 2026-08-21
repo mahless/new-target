@@ -29,6 +29,7 @@ import {
 import { ServiceOrder } from '../../types';
 import { formatSpeedLabel } from '../../lib/formatters';
 import { OrderDetailsModal } from '../orders/OrderDetailsModal';
+import { CollectPaymentModal } from '../orders/CollectPaymentModal';
 
 export const OperationsCenter: React.FC = () => {
   const {
@@ -42,9 +43,12 @@ export const OperationsCenter: React.FC = () => {
     financialViewScope,
     setFinancialViewScope,
     setActiveTab,
+    selectedOrderIdForModal,
     setSelectedOrderIdForModal,
     services,
   } = useApp();
+
+  const [collectPaymentOrder, setCollectPaymentOrder] = useState<ServiceOrder | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -337,7 +341,7 @@ export const OperationsCenter: React.FC = () => {
                       متبقي: {formatCurrency(order.remaining)}
                     </span>
                     <button
-                      onClick={() => setSelectedOrderIdForModal(order.id)}
+                      onClick={() => setCollectPaymentOrder(order)}
                       className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-lg shadow-sm transition-colors"
                     >
                       تحصيل
@@ -428,11 +432,18 @@ export const OperationsCenter: React.FC = () => {
         </div>
       </div>
 
-      {/* Order Details & Audit Modal */}
+      {/* Details & Audit Modal */}
       <OrderDetailsModal
         orderId={selectedOrderIdForModal}
         isOpen={Boolean(selectedOrderIdForModal)}
         onClose={() => setSelectedOrderIdForModal(null)}
+      />
+
+      {/* Quick Collect Payment Modal */}
+      <CollectPaymentModal
+        order={collectPaymentOrder}
+        isOpen={Boolean(collectPaymentOrder)}
+        onClose={() => setCollectPaymentOrder(null)}
       />
     </div>
   );
