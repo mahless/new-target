@@ -4,11 +4,12 @@
  * Ergonomic Enterprise AppLayout with Dynamic View Routing
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Header } from '../common/Header';
 import { Sidebar } from '../common/Sidebar';
 import { ToastContainer } from '../common/ToastContainer';
+import { LoginScreen } from '../common/LoginScreen';
 import { OperationsCenter } from '../operations/OperationsCenter';
 import { NewServiceOrder } from '../services/NewServiceOrder';
 import { OrdersList } from '../orders/OrdersList';
@@ -25,6 +26,13 @@ import { SettingsView } from '../settings/SettingsView';
 export const AppLayout: React.FC = () => {
   const { activeTab, setActiveTab, activeEmployee } = useApp();
   const role = activeEmployee?.role || 'employee';
+
+  const [isSessionAuthenticated, setIsSessionAuthenticated] = useState<boolean>(() => {
+    const activeFlag = sessionStorage.getItem('target_daily_session_active');
+    const sessionDate = sessionStorage.getItem('target_session_date');
+    const today = new Date().toDateString();
+    return activeFlag === 'true' && sessionDate === today;
+  });
 
   // Role Protection Guard
   useEffect(() => {
@@ -81,6 +89,15 @@ export const AppLayout: React.FC = () => {
         return <OperationsCenter />;
     }
   };
+
+  if (!isSessionAuthenticated) {
+    return (
+      <>
+        <LoginScreen />
+        <ToastContainer />
+      </>
+    );
+  }
 
   return (
     <div id="esnad-app-root" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
