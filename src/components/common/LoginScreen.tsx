@@ -78,7 +78,7 @@ export const LoginScreen: React.FC = () => {
             تارجت للخدمات الحكومية
           </h1>
           <p className="text-xs text-slate-400">
-            منظومة إدارة الخدمات والمعاملات والعهد المالية
+            منظومة إدارة الخدمات والمعاملات المالية
           </p>
         </div>
 
@@ -180,9 +180,6 @@ export const LoginScreen: React.FC = () => {
                 className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-4 py-3 text-center text-lg tracking-widest font-mono text-amber-400 focus:border-amber-500 focus:outline-none shadow-inner"
               />
             </div>
-            <p className="text-[10px] text-slate-500 text-center">
-              رمز PIN الافتراضي للحسابات التجريبية: 1234 أو حسب ما تم تعيينه
-            </p>
           </div>
 
           {/* Submit Button */}
@@ -193,8 +190,8 @@ export const LoginScreen: React.FC = () => {
               isSubmitting || !enteredPin.trim() ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
-            <span>دخول النظام</span>
-            <ArrowRight className="w-4 h-4 stroke-[3]" />
+            <span>تسجيل الدخول</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
       </div>
