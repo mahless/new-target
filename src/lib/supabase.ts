@@ -78,7 +78,9 @@ function safeMerge<T extends { id: string; created_at?: string }>(remoteData: T[
   const currentLocal = loadLocal<T[]>(localKey, []);
   const merged = [...remoteData];
   currentLocal.forEach(localItem => {
-    if (!merged.find(m => m.id === localItem.id)) {
+    const validUuid = toValidUuid(localItem.id);
+    // Compare exact ID or the UUID mapped version
+    if (!merged.find(m => m.id === localItem.id || m.id === validUuid)) {
       merged.push(localItem);
     }
   });
