@@ -30,6 +30,7 @@ import { ServiceOrder } from '../../types';
 import { formatSpeedLabel } from '../../lib/formatters';
 import { OrderDetailsModal } from '../orders/OrderDetailsModal';
 import { CollectPaymentModal } from '../orders/CollectPaymentModal';
+import { matchIds } from '../../lib/storage';
 
 export const OperationsCenter: React.FC = () => {
   const {
@@ -60,10 +61,14 @@ export const OperationsCenter: React.FC = () => {
     }
   }, [activeEmployee, financialViewScope, setFinancialViewScope]);
 
-  // Filter current branch orders
-  const branchOrders = orders.filter(
-    o => o.current_branch_id === activeBranch?.id || o.creation_branch_id === activeBranch?.id
-  );
+  // Filter current branch orders using matchIds for resilient matching
+  const branchOrders = orders.filter(o => {
+    const isBranchMatch = matchIds(o.current_branch_id, activeBranch?.id) || matchIds(o.creation_branch_id, activeBranch?.id) || !activeBranch;
+    if (financialViewScope === 'employee' && activeEmployee?.id) {
+      return isBranchMatch && matchIds(o.created_by_employee_id, activeEmployee.id);
+    }
+    return isBranchMatch;
+  });
 
   // Fast search filter (debounced to avoid heavy recalculation on every keystroke)
   const filteredQuickOrders = debouncedSearchQuery.trim()

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { CollectPaymentModal } from './CollectPaymentModal';
+import { matchIds } from '../../lib/storage';
 import { ModalSelect } from '../common/ModalSelect';
 import { formatSpeedLabel } from '../../lib/formatters';
 
@@ -67,7 +68,7 @@ export const OrdersList: React.FC = () => {
 
       // 2. Branch Filter
       if (branchFilter !== 'all') {
-        if (order.current_branch_id !== branchFilter && order.creation_branch_id !== branchFilter) {
+        if (!matchIds(order.current_branch_id, branchFilter) && !matchIds(order.creation_branch_id, branchFilter)) {
           return false;
         }
       }
@@ -82,7 +83,7 @@ export const OrdersList: React.FC = () => {
       if (paymentFilter === 'fully_paid' && order.remaining > 0) return false;
 
       // 5. Service Filter
-      if (serviceFilter !== 'all' && order.service_id !== serviceFilter) return false;
+      if (serviceFilter !== 'all' && !matchIds(order.service_id, serviceFilter)) return false;
 
       return true;
     });
