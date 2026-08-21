@@ -37,11 +37,11 @@ export const AppLayout: React.FC = () => {
   // Role Protection Guard
   useEffect(() => {
     if (role === 'viewer') {
-      if (['new_service', 'transfers', 'daily_closing', 'settings', 'audit_logs', 'reports'].includes(activeTab)) {
+      if (['new_service', 'treasury', 'transfers', 'daily_closing', 'settings', 'audit_logs', 'reports'].includes(activeTab)) {
         setActiveTab('operations');
       }
     } else if (role === 'employee') {
-      if (['settings', 'audit_logs', 'reports'].includes(activeTab)) {
+      if (['treasury', 'settings', 'audit_logs', 'reports'].includes(activeTab)) {
         setActiveTab('operations');
       }
     }

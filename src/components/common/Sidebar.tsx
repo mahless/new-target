@@ -118,10 +118,10 @@ export const Sidebar: React.FC = () => {
 
   const allowedItems = navItems.filter(item => {
     if (role === 'viewer') {
-      return !['new_service', 'transfers', 'daily_closing', 'settings', 'audit_logs', 'reports'].includes(item.id);
+      return !['new_service', 'treasury', 'transfers', 'daily_closing', 'settings', 'audit_logs', 'reports'].includes(item.id);
     }
     if (role === 'employee') {
-      return !['settings', 'audit_logs', 'reports'].includes(item.id);
+      return !['treasury', 'settings', 'audit_logs', 'reports'].includes(item.id);
     }
     return true; // manager sees everything including reports
   });
