@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { ServiceOrder } from '../../types';
 import { formatSpeedLabel } from '../../lib/formatters';
+import { OrderDetailsModal } from '../orders/OrderDetailsModal';
 
 export const OperationsCenter: React.FC = () => {
   const {
@@ -426,6 +427,13 @@ export const OperationsCenter: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Order Details & Audit Modal */}
+      <OrderDetailsModal
+        orderId={selectedOrderIdForModal}
+        isOpen={Boolean(selectedOrderIdForModal)}
+        onClose={() => setSelectedOrderIdForModal(null)}
+      />
     </div>
   );
 };
