@@ -998,7 +998,27 @@ export class ResilientStorageService {
       );
     }
 
-    // 2. Reverse Distributor Debt if linked
+    // 2. Record refund payment (negative amounts) so KPI stats are corrected
+    if (totalRefund > 0) {
+      const refundPayment: Payment = {
+        id: `pmt-refund-${Date.now()}`,
+        order_id: order.id,
+        branch_id: branchId,
+        employee_id: empId,
+        amount: -totalRefund,
+        cash_amount: -refundCash,
+        electronic_amount: -refundElectronic,
+        electronic_type: null,
+        notes: `استرداد إلغاء معاملة ${order.order_number}${notes ? ' | ' + notes : ''}`,
+        idempotency_key: `pmt-refund-${orderId}-${Date.now()}`,
+        created_at: now,
+      };
+      const payments = load<Payment[]>(STORAGE_KEYS.PAYMENTS, []);
+      payments.unshift(refundPayment);
+      save(STORAGE_KEYS.PAYMENTS, payments);
+    }
+
+    // 3. Reverse Distributor Debt if linked
     if (order.distributor_id) {
       try {
         this.recordDistributorTransaction(
@@ -1015,7 +1035,7 @@ export class ResilientStorageService {
       }
     }
 
-    // 3. Reverse External Office Balance if linked
+    // 4. Reverse External Office Balance if linked
     if (order.external_office_id && order.external_office_cost > 0) {
       try {
         const offices = this.getExternalOffices();
@@ -1046,10 +1066,12 @@ export class ResilientStorageService {
       }
     }
 
-    // 4. Update Order: mark as cancelled, zero out payments
+    // 5. Update Order: mark as cancelled, zero out ALL financial fields
     order.status = 'cancelled';
     order.total_paid = 0;
     order.remaining = order.price;
+    order.cash_amount = 0;
+    order.electronic_amount = 0;
     order.updated_at = now;
     if (notes) {
       order.notes = order.notes
@@ -1059,7 +1081,7 @@ export class ResilientStorageService {
     orders[idx] = order;
     save(STORAGE_KEYS.ORDERS, orders);
 
-    // 5. Audit Log
+    // 6. Audit Log
     this.addAuditLog(
       'إلغاء معاملة مع استرداد مالي',
       'ServiceOrder',
