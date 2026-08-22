@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
 @layer base {
+  html {
+    color-scheme: dark !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
+  }
+
+  body {
+    background-color: #020617 !important; /* slate-950 */
+    color: #f1f5f9 !important; /* slate-100 */
+  }
+
   * {
     font-family: 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
