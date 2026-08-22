@@ -153,7 +153,7 @@ export const TreasuryView: React.FC = () => {
         };
       case 'expense':
         return {
-          label: 'مصروف تشغيلي',
+          label: 'مصروف',
           icon: ArrowUpRight,
           color: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
           isIncome: false,

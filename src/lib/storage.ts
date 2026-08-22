@@ -1274,7 +1274,7 @@ export class ResilientStorageService {
       -amount,
       'expenses',
       expense.id,
-      `صرف مصروف [${params.categoryName}]: ${params.notes || ''}`,
+      `[${params.categoryName}]: ${params.notes || ''}`,
       `ldg-exp-${params.idempotencyKey}`,
       params.employeeId
     );
