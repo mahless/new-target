@@ -47,6 +47,7 @@ export const TreasuryView: React.FC = () => {
     financialViewScope === 'employee' ? (activeEmployee?.id || 'all') : 'all'
   );
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [expandedNoteEntryId, setExpandedNoteEntryId] = useState<string | null>(null);
 
   // Employee Drawers Breakdown for all registered active employees
   const employeeDrawers = useMemo(() => {
@@ -152,7 +153,7 @@ export const TreasuryView: React.FC = () => {
         };
       case 'expense':
         return {
-          label: 'صرف مصروف تشغيلي',
+          label: 'مصروف تشغيلي',
           icon: ArrowUpRight,
           color: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
           isIncome: false,
@@ -480,8 +481,31 @@ export const TreasuryView: React.FC = () => {
                           <span>{typeInfo.label}</span>
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-slate-300 max-w-xs truncate">
-                        {entry.notes || '-'}
+                      <td className="py-3.5 px-4 text-slate-300 max-w-xs">
+                        {entry.notes ? (
+                          <div className="space-y-1">
+                            <div
+                              className="truncate cursor-pointer hover:text-amber-300 transition-colors"
+                              title="انقر لعرض البيان كاملاً"
+                              onClick={() => setExpandedNoteEntryId(expandedNoteEntryId === entry.id ? null : entry.id)}
+                            >
+                              {entry.notes}
+                            </div>
+                            {expandedNoteEntryId === entry.id && (
+                              <div className="mt-1.5 p-2.5 bg-slate-950 border border-amber-500/30 rounded-xl text-[11px] text-amber-100 leading-relaxed whitespace-pre-wrap break-words animate-in fade-in duration-150">
+                                {entry.notes}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setExpandedNoteEntryId(null); }}
+                                  className="mt-2 flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-200 transition-colors"
+                                >
+                                  ✕ إغلاق
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600">-</span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5">
