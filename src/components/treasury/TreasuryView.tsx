@@ -125,21 +125,21 @@ export const TreasuryView: React.FC = () => {
     switch (type) {
       case 'customer_cash_payment':
         return {
-          label: 'تحصيل كاش من عميل',
+          label: 'كاش',
           icon: ArrowDownLeft,
           color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
           isIncome: true,
         };
       case 'distributor_payment':
         return {
-          label: 'توريد كاش من موزع',
+          label: 'توريد من موزع',
           icon: Users2,
           color: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
           isIncome: true,
         };
       case 'branch_transfer_in':
         return {
-          label: 'تحويل وارد من فرع',
+          label: 'وارد من فرع',
           icon: ArrowDownLeft,
           color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
           isIncome: true,
@@ -167,7 +167,7 @@ export const TreasuryView: React.FC = () => {
         };
       case 'branch_transfer_out':
         return {
-          label: 'تحويل صادر لفرع آخر',
+          label: 'صادر لفرع آخر',
           icon: ArrowUpRight,
           color: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
           isIncome: false,
