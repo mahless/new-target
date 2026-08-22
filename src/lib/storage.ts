@@ -714,7 +714,7 @@ export class ResilientStorageService {
           cash,
           'payments',
           paymentRecord.id,
-          `تحصيل كاش من العميل ${customer.name} - طلب ${orderNumber}`,
+          `من ${customer.name} - طلب ${orderNumber}`,
           `ldg-pmt-${params.idempotencyKey}`,
           employeeId
         );
@@ -871,7 +871,7 @@ export class ResilientStorageService {
         cash,
         'payments',
         payment.id,
-        `سداد متبقي من العميل ${order.customer_name} - طلب ${order.order_number}`,
+        `من ${order.customer_name} - طلب ${order.order_number}`,
         `ldg-add-${params.idempotencyKey}`,
         employeeId
       );
@@ -1274,7 +1274,7 @@ export class ResilientStorageService {
       -amount,
       'expenses',
       expense.id,
-      `[${params.categoryName}]: ${params.notes || ''}`,
+      `${params.categoryName}${params.notes ? ': ' + params.notes : ''}`,
       `ldg-exp-${params.idempotencyKey}`,
       params.employeeId
     );
