@@ -184,7 +184,7 @@ export const SettingsView: React.FC = () => {
       storage.saveService({
         id: editingServiceId || undefined,
         name: sName.trim(),
-        category: '',
+        category: sCategory.trim(),
         base_price: Number(sBasePrice) || 0,
         speeds: sSpeeds,
       });

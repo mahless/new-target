@@ -227,7 +227,6 @@ export const NewServiceOrder: React.FC = () => {
     setSearchQuery('');
     setIsSearchOpen(false);
     setIdempotencyKey(generateIdempotencyKey('ord-submit'));
-    showToast('info', 'تمت إعادة تعيين النموذج', 'النموذج جاهز لتسجيل معاملة جديدة.');
   };
 
   // Submit Order with Idempotency Protection
@@ -290,8 +289,6 @@ export const NewServiceOrder: React.FC = () => {
       });
 
       refreshData();
-      setCreatedOrder(result.order);
-      setIsReceiptModalOpen(true);
       showToast(
         'success',
         'تم تسجيل المعاملة بنجاح',
@@ -300,6 +297,10 @@ export const NewServiceOrder: React.FC = () => {
 
       // Reset form after success
       handleResetForm();
+      
+      // Ensure modal opens with the created order AFTER reset
+      setCreatedOrder(result.order);
+      setIsReceiptModalOpen(true);
     } catch (err: any) {
       showToast('error', 'فشل تسجيل المعاملة', err.message || 'حدث خطأ أثناء معالجة الطلب.');
     } finally {

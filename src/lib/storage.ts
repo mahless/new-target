@@ -459,7 +459,7 @@ export class ResilientStorageService {
   }
 
   public saveService(service: Partial<Service> & { name: string; category?: string; base_price: number }): Service {
-    const services = this.getServices();
+    const services = load<Service[]>(STORAGE_KEYS.SERVICES, []);
     const now = new Date().toISOString();
     let saved: Service;
 
@@ -669,7 +669,7 @@ export class ResilientStorageService {
     const activeEmp = employees.find(e => e.id === employeeId);
     const employeeName = activeEmp ? activeEmp.name : 'موظف';
 
-    const services = this.getServices();
+    const services = load<Service[]>(STORAGE_KEYS.SERVICES, []);
     const service = services.find(s => s.id === params.serviceId);
     const serviceName = service ? service.name : 'خدمة حكومية';
 
@@ -2284,7 +2284,7 @@ export class ResilientStorageService {
   }
 
   public createService(service: { name: string; category?: string; basePrice: number; executionDays?: number; speeds?: any[] }): Service {
-    const services = this.getServices();
+    const services = load<Service[]>(STORAGE_KEYS.SERVICES, []);
     const newService: Service = {
       id: `srv-${Date.now()}`,
       name: service.name,
