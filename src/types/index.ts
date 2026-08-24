@@ -304,6 +304,8 @@ export interface SystemStats {
   todayCashIn: number;
   todayCashOut: number;
   todayElectronic: number;
+  todayNetCash?: number;
+  todayOrdersCount?: number;
   currentDrawerBalance: number;
   branchDrawerBalance?: number;
   employeeDrawerBalance?: number;

@@ -27,11 +27,13 @@ export const ExpensesView: React.FC = () => {
   const {
     activeBranch,
     activeEmployee,
+    financialViewScope,
     branches,
     employees,
     expenses,
     orders,
     drawerBalance,
+    stats,
     refreshData,
     showToast,
     generateIdempotencyKey,
@@ -59,7 +61,14 @@ export const ExpensesView: React.FC = () => {
   };
 
   const filteredExpenses = useMemo(() => {
+    const localToday = new Date().toLocaleDateString('en-CA');
     return expenses.filter(exp => {
+      try {
+        const expDate = new Date(exp.created_at).toLocaleDateString('en-CA');
+        if (expDate !== localToday) return false;
+      } catch {
+        if (!(exp.created_at || '').startsWith(localToday)) return false;
+      }
       if (filterBranchId !== 'all' && exp.branch_id !== filterBranchId) return false;
       if (filterCategory !== 'all' && exp.category_name !== categoriesMap[filterCategory] && exp.category !== filterCategory) return false;
       return true;
@@ -152,28 +161,35 @@ export const ExpensesView: React.FC = () => {
       {/* Stats Ribbon */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">إجمالي المصروفات</div>
+          <div className="text-xs text-slate-400 font-semibold">إجمالي مصروفات اليوم</div>
           <div className="text-2xl font-black text-rose-400 font-mono tracking-tight mt-1">
             {formatCurrency(totalFilteredAmount)}
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">{filteredExpenses.length} سند صرف مسجل</p>
+          <p className="text-[11px] text-slate-500 mt-1">{filteredExpenses.length} سند صرف مسجل اليوم (تتصفر يومياً)</p>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
           <div className="text-xs text-slate-400 font-semibold">
-            كاش الخزنة {activeBranch ? `(${activeBranch.name})` : ''}
+            {financialViewScope === 'employee' ? 'صافي كاش عهدتي اليوم' : `صافي كاش الخزنة اليوم ${activeBranch ? `(${activeBranch.name})` : ''}`}
           </div>
-          <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight mt-1">
-            {formatCurrency(drawerBalance)}
+          <div className={`text-2xl font-black font-mono tracking-tight mt-1 ${
+            (stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut)) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+          }`}>
+            {formatCurrency(stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut))}
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">متاح للصرف المباشر</p>
+          <p className="text-[11px] text-slate-500 mt-1">صافي حركة نقدية اليوم (تتصفر يومياً)</p>
         </div>
       </div>
 
       {/* Filter and List Table */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-800">
-          <h3 className="text-sm font-black text-slate-100">سجل المصروفات المعتمدة</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-black text-slate-100">سجل مصروفات اليوم</h3>
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-rose-400 font-bold">
+              {filteredExpenses.length} سند صرف اليوم
+            </span>
+          </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <ModalSelect
@@ -226,7 +242,7 @@ export const ExpensesView: React.FC = () => {
               {filteredExpenses.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-8 text-slate-500">
-                    لا توجد مصروفات مسجلة مطابقة للفلتر.
+                    لا توجد مصروفات مسجلة اليوم حتى الآن.
                   </td>
                 </tr>
               ) : (

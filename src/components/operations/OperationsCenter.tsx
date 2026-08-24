@@ -92,8 +92,18 @@ export const OperationsCenter: React.FC = () => {
     o => o.remaining > 0 && o.status !== 'cancelled'
   ).slice(0, 5);
 
-  // Recent 6 orders
-  const recentOrders = branchOrders.slice(0, 6);
+  // Today's orders for the selected scope & branch (resets daily)
+  const localToday = new Date().toLocaleDateString('en-CA');
+  const todayBranchOrders = branchOrders.filter(o => {
+    try {
+      return new Date(o.created_at).toLocaleDateString('en-CA') === localToday;
+    } catch {
+      return (o.created_at || '').startsWith(localToday);
+    }
+  });
+
+  // Recent today's orders
+  const recentOrders = todayBranchOrders;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -193,15 +203,17 @@ export const OperationsCenter: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
-            <span>{financialViewScope === 'employee' ? 'كاش عهدتي' : 'كاش خزينة الفرع'}</span>
+            <span>{financialViewScope === 'employee' ? 'صافي كاش عهدتي اليوم' : 'صافي كاش الفرع اليوم'}</span>
             <Wallet className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight">
-              {formatCurrency(drawerBalance)}
+            <div className={`text-2xl font-black font-mono tracking-tight ${
+              (stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut)) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}>
+              {formatCurrency(stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut))}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              {financialViewScope === 'employee' ? 'النقدية الحاضرة بعهدتك الآن' : 'الرصيد الفعلي الحاضر بالخزينة'}
+              {financialViewScope === 'employee' ? 'صافي النقدية بعهدتك لليوم (تتصفر يومياً)' : 'صافي النقدية الحاضرة لليوم (تتصفر يومياً)'}
             </p>
           </div>
         </div>
@@ -233,22 +245,22 @@ export const OperationsCenter: React.FC = () => {
               {formatCurrency(stats.todayCashOut)}
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              {financialViewScope === 'employee' ? 'تم خصمها من عهدتك النقدية' : 'تم خصمها آلياً من نقدية الدرج'}
+              {financialViewScope === 'employee' ? 'تم خصمها من عهدتك اليومية' : 'تم خصمها آلياً من نقدية اليوم'}
             </p>
           </div>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold">
-            <span>{financialViewScope === 'employee' ? 'معاملاتي النشطة' : 'معاملات الفرع النشطة'}</span>
+            <span>{financialViewScope === 'employee' ? 'معاملاتي اليوم' : 'معاملات الفرع اليوم'}</span>
             <Clock className="w-4 h-4 text-sky-400" />
           </div>
           <div className="mt-2">
             <div className="text-2xl font-black text-sky-400 font-mono tracking-tight">
-              {stats.activeOrdersCount} معاملة
+              {(stats.todayOrdersCount ?? 0)} معاملة
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
-              منها <span className="text-amber-300 font-bold">{stats.pendingDeliveryCount}</span> جاهزة للتسليم
+              إجمالي الطلبات المسجلة اليوم (تتصفر يومياً)
             </p>
           </div>
         </div>
@@ -364,7 +376,14 @@ export const OperationsCenter: React.FC = () => {
       {/* Recent Activity Table */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
-          <h3 className="text-sm font-black text-slate-100">آخر المعاملات المسجلة بالفرع</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-black text-slate-100">
+              {financialViewScope === 'employee' ? 'معاملاتي المسجلة اليوم' : 'معاملات اليوم المسجلة بالفرع'}
+            </h3>
+            <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-amber-400 font-bold">
+              {recentOrders.length} معاملة اليوم
+            </span>
+          </div>
           <button
             onClick={() => setActiveTab('orders')}
             className="text-xs text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1"
@@ -392,7 +411,7 @@ export const OperationsCenter: React.FC = () => {
               {recentOrders.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="text-center py-6 text-slate-500">
-                    لا توجد معاملات مسجلة حتى الآن. ابدأ بتسجيل معاملة جديدة.
+                    لا توجد معاملات مسجلة اليوم حتى الآن. ابدأ بتسجيل معاملة جديدة.
                   </td>
                 </tr>
               ) : (

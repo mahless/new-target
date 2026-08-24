@@ -633,13 +633,8 @@ export const TreasuryView: React.FC = () => {
                     <span>صافي عهدة / حركة الفترة:</span>
                     <span className="text-slate-500 font-mono">{transactionsCount} حركة</span>
                   </div>
-                  <div className="text-lg font-black text-amber-400 font-mono tracking-tight mt-0.5 flex items-baseline justify-between">
-                    <span>{formatCurrency(periodBalance)} <span className="text-xs font-sans text-slate-500">ج.م</span></span>
-                    {periodMode !== 'all_time' && (
-                      <span className="text-[10px] text-slate-500 font-normal">
-                        التراكمي: {formatCurrency(cumulativeBalance)} ج.م
-                      </span>
-                    )}
+                  <div className="text-lg font-black text-amber-400 font-mono tracking-tight mt-0.5">
+                    {formatCurrency(periodBalance)} <span className="text-xs font-sans text-slate-500">ج.م</span>
                   </div>
                 </div>
 
@@ -683,13 +678,8 @@ export const TreasuryView: React.FC = () => {
                   <span>صافي حركة خزينة الفرع بالفترة:</span>
                   <span className="text-[10px] font-mono text-slate-500">{transactionsCount} حركة</span>
                 </div>
-                <div className="text-xl font-black text-emerald-400 font-mono tracking-tight mt-0.5 flex items-baseline justify-between">
-                  <span>{formatCurrency(periodNet)} <span className="text-xs font-sans text-slate-500">ج.م</span></span>
-                  {periodMode !== 'all_time' && (
-                    <span className="text-[10px] text-slate-500 font-normal">
-                      الحاضر: {formatCurrency(cumulativeBalance)} ج.م
-                    </span>
-                  )}
+                <div className="text-xl font-black text-emerald-400 font-mono tracking-tight mt-0.5">
+                  {formatCurrency(periodNet)} <span className="text-xs font-sans text-slate-500">ج.م</span>
                 </div>
               </div>
 

@@ -2082,16 +2082,27 @@ export class ResilientStorageService {
       }
       return true;
     });
+    const todayOrders = orders.filter(o => {
+      try {
+        return new Date(o.created_at).toLocaleDateString('en-CA') === localToday;
+      } catch {
+        return (o.created_at || '').startsWith(localToday);
+      }
+    });
     const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled');
     const pendingDelivery = orders.filter(o => o.status === 'completed' || o.status === 'in_progress');
     const unpaidRemaining = orders
       .filter(o => o.status !== 'cancelled')
       .reduce((sum, o) => sum + Number(o.remaining || 0), 0);
 
+    const todayNetCash = Number((todayCashIn - todayCashOut).toFixed(2));
+
     return {
       todayCashIn: Number(todayCashIn.toFixed(2)),
       todayCashOut: Number(todayCashOut.toFixed(2)),
       todayElectronic: Number(todayElectronic.toFixed(2)),
+      todayNetCash,
+      todayOrdersCount: todayOrders.length,
       currentDrawerBalance: isEmployeeScoped ? employeeDrawerBalance : branchDrawerBalance,
       branchDrawerBalance,
       employeeDrawerBalance,
