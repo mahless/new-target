@@ -25,6 +25,7 @@ import {
   ArrowUpRight,
   CreditCard,
   Building2,
+  Smartphone,
 } from 'lucide-react';
 import { ModalSelect } from '../common/ModalSelect';
 
@@ -32,6 +33,7 @@ export const ReportsView: React.FC = () => {
   const {
     branches,
     orders,
+    payments,
     expenses,
     distributors,
     externalOffices,
@@ -92,17 +94,42 @@ export const ReportsView: React.FC = () => {
     });
   }, [expenses, selectedBranchId, dateRange, startDate, endDate]);
 
-  // Core Financial Matrix Calculations
-  const totalGrossRevenue = useMemo(() => {
-    return filteredOrders
-      .filter(o => o.status !== 'cancelled')
-      .reduce((sum, o) => sum + Number(o.price || 0), 0);
-  }, [filteredOrders]);
+  // Filter payments for accurate electronic breakdown
+  const filteredPayments = useMemo(() => {
+    return payments.filter(p => {
+      if (selectedBranchId !== 'all' && p.branch_id !== selectedBranchId) return false;
+      const pmtTime = new Date(p.created_at).getTime();
 
-  const totalCollectedCashAndElec = useMemo(() => {
+      if (dateRange === 'today') {
+        const pmtDate = new Date(p.created_at).toDateString();
+        const today = new Date().toDateString();
+        if (pmtDate !== today) return false;
+      } else if (dateRange === 'custom') {
+        if (startDate) {
+          const start = new Date(startDate).setHours(0, 0, 0, 0);
+          if (pmtTime < start) return false;
+        }
+        if (endDate) {
+          const end = new Date(endDate).setHours(23, 59, 59, 999);
+          if (pmtTime > end) return false;
+        }
+      }
+      return true;
+    });
+  }, [payments, selectedBranchId, dateRange, startDate, endDate]);
+
+  // Total collected from recorded services (Cash + Electronic)
+  const totalCollectedActual = useMemo(() => {
     return filteredOrders
       .filter(o => o.status !== 'cancelled')
       .reduce((sum, o) => sum + Number(o.total_paid || 0), 0);
+  }, [filteredOrders]);
+
+  // Total gross service agreed prices (original contract price)
+  const totalOriginalContractPrice = useMemo(() => {
+    return filteredOrders
+      .filter(o => o.status !== 'cancelled')
+      .reduce((sum, o) => sum + Number(o.price || 0), 0);
   }, [filteredOrders]);
 
   const totalExternalOfficesCost = useMemo(() => {
@@ -115,9 +142,6 @@ export const ReportsView: React.FC = () => {
     return filteredExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
   }, [filteredExpenses]);
 
-  // Real Net Profit = Gross Revenue - Operating Expenses - External Offices Cost
-  const netOperatingProfit = totalGrossRevenue - totalOperatingExpenses - totalExternalOfficesCost;
-
   // Uncollected Remaining Revenue
   const totalUnpaidRemaining = useMemo(() => {
     return filteredOrders
@@ -126,17 +150,57 @@ export const ReportsView: React.FC = () => {
   }, [filteredOrders]);
 
   // Liquidity breakdown: Cash vs Electronic
-  const cashCollectedTotal = useMemo(() => {
+  const cashCollectedGross = useMemo(() => {
     return filteredOrders
       .filter(o => o.status !== 'cancelled')
       .reduce((sum, o) => sum + Number(o.cash_amount || 0), 0);
   }, [filteredOrders]);
+
+  // Actual Drawer Cash = Gross Cash Collected - Operating Expenses
+  const actualDrawerCashNet = cashCollectedGross - totalOperatingExpenses;
 
   const electronicCollectedTotal = useMemo(() => {
     return filteredOrders
       .filter(o => o.status !== 'cancelled')
       .reduce((sum, o) => sum + Number(o.electronic_amount || 0), 0);
   }, [filteredOrders]);
+
+  // Electronic sub-breakdown: InstaPay vs Wallets
+  const electronicBreakdown = useMemo(() => {
+    let instapaySum = 0;
+    let walletSum = 0;
+
+    // First check payments table if present
+    if (filteredPayments.length > 0) {
+      filteredPayments.forEach(p => {
+        const amt = Number(p.electronic_amount || 0);
+        if (amt <= 0) return;
+        if (p.electronic_type === 'wallet') {
+          walletSum += amt;
+        } else {
+          // Defaults to instapay (including pos/instapay)
+          instapaySum += amt;
+        }
+      });
+    } else {
+      // Fallback from filteredOrders
+      filteredOrders.forEach(o => {
+        if (o.status === 'cancelled') return;
+        const amt = Number(o.electronic_amount || 0);
+        if (amt <= 0) return;
+        instapaySum += amt;
+      });
+    }
+
+    return {
+      instapay: instapaySum,
+      wallet: walletSum,
+    };
+  }, [filteredPayments, filteredOrders]);
+
+  // Real Net Profit = Actual Drawer Cash + Electronic Collected - External Offices Cost
+  // which is also equal to: (Cash In + Elec In) - Operating Expenses - External Offices Cost
+  const netOperatingProfit = totalCollectedActual - totalOperatingExpenses - totalExternalOfficesCost;
 
   // Service Performance breakdown
   const serviceStats = useMemo(() => {
@@ -261,12 +325,13 @@ export const ReportsView: React.FC = () => {
       {/* Core P&L Financial Cards (Real Net Profit Formula) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">إجمالي الخدمات (Gross)</div>
+          <div className="text-xs text-slate-400 font-semibold">إجمالي الخدمات (الوارد الفعلي)</div>
           <div className="text-2xl font-black text-slate-100 font-mono tracking-tight mt-1">
-            {formatCurrency(totalGrossRevenue)}
+            {formatCurrency(totalCollectedActual)}
           </div>
-          <div className="text-[11px] text-slate-500 mt-1 font-mono">
-            المسدد فعلياً: <span className="text-emerald-400 font-bold">{formatCurrency(totalCollectedCashAndElec)}</span>
+          <div className="text-[11px] text-slate-400 mt-1 font-mono flex items-center justify-between">
+            <span>كاش + إلكتروني محصل</span>
+            <span className="text-slate-500 text-[10px]">العقود: {formatCurrency(totalOriginalContractPrice)}</span>
           </div>
         </div>
 
@@ -292,45 +357,85 @@ export const ReportsView: React.FC = () => {
             <span>صافي الربح</span>
             <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight mt-1">
+          <div className={`text-2xl font-black font-mono tracking-tight mt-1 ${
+            netOperatingProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+          }`}>
             {formatCurrency(netOperatingProfit)}
+          </div>
+          <div className="text-[10px] text-slate-400 mt-1 font-mono">
+            صافي السيولة النقدية المحققة
           </div>
         </div>
       </div>
 
       {/* Liquidity Breakdown & Customer Balances */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Actual Drawer Cash Card: Gross Cash - Expenses */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
-          <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            <Wallet className="w-4 h-4 text-emerald-400" />
-            <span> النقدية المحصلة (كاش)</span>
+          <div className="text-xs font-bold text-slate-300 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Wallet className="w-4 h-4 text-emerald-400" />
+              <span>كاش الخزنة الفعلي (بالدرج)</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-400">بعد المصروفات</span>
           </div>
-          <div className="text-xl font-black text-emerald-400 font-mono">
-            {formatCurrency(cashCollectedTotal)}
+          <div className={`text-xl font-black font-mono ${
+            actualDrawerCashNet >= 0 ? 'text-emerald-400' : 'text-rose-400'
+          }`}>
+            {formatCurrency(actualDrawerCashNet)}
           </div>
-          <p className="text-[11px] text-slate-500">تم إيداعها بدرج نقدية الفروع</p>
+          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800 font-mono">
+            <span>محصل كاش: <strong className="text-emerald-300">{formatCurrency(cashCollectedGross)}</strong></span>
+            <span>-</span>
+            <span>مصروف: <strong className="text-rose-400">{formatCurrency(totalOperatingExpenses)}</strong></span>
+          </div>
         </div>
 
+        {/* Split Electronic Card: InstaPay vs Wallets */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
-          <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-            <CreditCard className="w-4 h-4 text-sky-400" />
-            <span> (InstaPay / محافظ)</span>
+          <div className="text-xs font-bold text-slate-300 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <CreditCard className="w-4 h-4 text-sky-400" />
+              <span>المدفوعات الإلكترونية</span>
+            </div>
+            <span className="text-xs font-black font-mono text-sky-400">
+              {formatCurrency(electronicCollectedTotal)}
+            </span>
           </div>
-          <div className="text-xl font-black text-sky-400 font-mono">
-            {formatCurrency(electronicCollectedTotal)}
+
+          {/* Internal 2-Column Split: InstaPay vs Wallets */}
+          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+            <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+              <div className="flex items-center gap-1 text-[11px] text-slate-400 font-semibold">
+                <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+                <span>InstaPay</span>
+              </div>
+              <div className="text-sm font-black text-indigo-400 font-mono mt-1">
+                {formatCurrency(electronicBreakdown.instapay)}
+              </div>
+            </div>
+
+            <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+              <div className="flex items-center gap-1 text-[11px] text-slate-400 font-semibold">
+                <Smartphone className="w-3.5 h-3.5 text-sky-400" />
+                <span>المحافظ الإلكترونية</span>
+              </div>
+              <div className="text-sm font-black text-sky-400 font-mono mt-1">
+                {formatCurrency(electronicBreakdown.wallet)}
+              </div>
+            </div>
           </div>
-          <p className="text-[11px] text-slate-500">تم تحصيلها في الحسابات البنكية</p>
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 space-y-2">
           <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
             <DollarSign className="w-4 h-4 text-rose-400" />
-            <span>متبقيات علي العملاء</span>
+            <span>متبقيات على العملاء</span>
           </div>
           <div className="text-xl font-black text-rose-400 font-mono">
             {formatCurrency(totalUnpaidRemaining)}
           </div>
-          <p className="text-[11px] text-slate-500">دفعات مؤجلة للاستلام</p>
+          <p className="text-[11px] text-slate-500">دفعات مؤجلة للاستلام عند تسليم المعاملة</p>
         </div>
       </div>
 

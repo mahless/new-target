@@ -212,9 +212,6 @@ export const OperationsCenter: React.FC = () => {
             }`}>
               {formatCurrency(stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut))}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              {financialViewScope === 'employee' ? 'صافي النقدية بعهدتك لليوم (تتصفر يومياً)' : 'صافي النقدية الحاضرة لليوم (تتصفر يومياً)'}
-            </p>
           </div>
         </div>
 
@@ -244,9 +241,6 @@ export const OperationsCenter: React.FC = () => {
             <div className="text-2xl font-black text-rose-400 font-mono tracking-tight">
               {formatCurrency(stats.todayCashOut)}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              {financialViewScope === 'employee' ? 'تم خصمها من عهدتك اليومية' : 'تم خصمها آلياً من نقدية اليوم'}
-            </p>
           </div>
         </div>
 
@@ -259,9 +253,6 @@ export const OperationsCenter: React.FC = () => {
             <div className="text-2xl font-black text-sky-400 font-mono tracking-tight">
               {(stats.todayOrdersCount ?? 0)} معاملة
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              إجمالي الطلبات المسجلة اليوم (تتصفر يومياً)
-            </p>
           </div>
         </div>
       </div>

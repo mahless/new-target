@@ -28,10 +28,12 @@ export const TransfersView: React.FC = () => {
   const {
     activeBranch,
     activeEmployee,
+    financialViewScope,
     branches,
     employees,
     transfers,
     drawerBalance,
+    stats,
     refreshData,
     showToast,
     generateIdempotencyKey,
@@ -280,9 +282,13 @@ export const TransfersView: React.FC = () => {
       >
         <form onSubmit={handleSendTransfer} className="space-y-4">
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between">
-            <span className="text-slate-400">كاش الخزنة:</span>
-            <span className="font-bold font-mono text-emerald-400">
-              {formatCurrency(drawerBalance)}
+            <span className="text-slate-400">
+              {financialViewScope === 'employee' ? 'صافي كاش عهدتي اليوم:' : 'صافي كاش الخزنة اليوم:'}
+            </span>
+            <span className={`font-bold font-mono ${
+              (stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut)) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+            }`}>
+              {formatCurrency(stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut))}
             </span>
           </div>
 

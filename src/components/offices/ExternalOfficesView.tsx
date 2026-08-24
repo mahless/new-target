@@ -30,8 +30,10 @@ export const ExternalOfficesView: React.FC = () => {
   const {
     activeBranch,
     activeEmployee,
+    financialViewScope,
     externalOffices,
     drawerBalance,
+    stats,
     refreshData,
     showToast,
     generateIdempotencyKey,
@@ -252,11 +254,15 @@ export const ExternalOfficesView: React.FC = () => {
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">كاش الخزنة {activeBranch ? `(${activeBranch.name})` : ''}</div>
-          <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight mt-1">
-            {formatCurrency(drawerBalance)}
+          <div className="text-xs text-slate-400 font-semibold">
+            {financialViewScope === 'employee' ? 'صافي كاش عهدتي اليوم' : `صافي كاش الخزنة اليوم ${activeBranch ? `(${activeBranch.name})` : ''}`}
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">متاح لسداد مستحقات المكاتب</p>
+          <div className={`text-2xl font-black font-mono tracking-tight mt-1 ${
+            (stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut)) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+          }`}>
+            {formatCurrency(stats.todayNetCash ?? (stats.todayCashIn - stats.todayCashOut))}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1">صافي حركة نقدية اليوم (تتصفر يومياً)</p>
         </div>
       </div>
 
