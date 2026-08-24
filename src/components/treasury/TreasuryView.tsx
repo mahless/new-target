@@ -303,7 +303,7 @@ export const TreasuryView: React.FC = () => {
     switch (type) {
       case 'customer_cash_payment':
         return {
-          label: 'تحصيل كاش من عميل',
+          label: 'كاش',
           icon: ArrowDownLeft,
           color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
           isIncome: true,
@@ -331,7 +331,7 @@ export const TreasuryView: React.FC = () => {
         };
       case 'expense':
         return {
-          label: 'صرف مصروف تشغيلي',
+          label: 'مصروف',
           icon: ArrowUpRight,
           color: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
           isIncome: false,
@@ -707,7 +707,7 @@ export const TreasuryView: React.FC = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-black text-slate-100">
-              سجل قيود دفتر الأستاذ المالي ({dateRange.label})
+              السجل المالي ({dateRange.label})
             </h3>
             <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-amber-400 font-bold">
               {filteredTableEntries.length} قيد مالي
@@ -773,9 +773,9 @@ export const TreasuryView: React.FC = () => {
               onChange={(val) => setTypeFilter(val)}
               options={[
                 { value: 'all', label: 'جميع أنواع القيود' },
-                { value: 'customer_cash_payment', label: 'تحصيل كاش من عميل' },
+                { value: 'customer_cash_payment', label: 'كاش' },
                 { value: 'distributor_payment', label: 'توريد كاش من موزع' },
-                { value: 'expense', label: 'مصروف تشغيلي' },
+                { value: 'expense', label: 'مصروف' },
                 { value: 'external_office_cost', label: 'تكلفة مكتب خارجي' },
                 { value: 'branch_transfer_in', label: 'تحويل وارد من فرع' },
                 { value: 'branch_transfer_out', label: 'تحويل صادر لفرع' },
