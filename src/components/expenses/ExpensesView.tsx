@@ -38,7 +38,7 @@ export const ExpensesView: React.FC = () => {
   } = useApp();
 
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory>('office_supplies');
+  const [selectedCategory, setSelectedCategory] = useState<string>('office_supplies');
   const [amount, setAmount] = useState('0');
   const [description, setDescription] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
@@ -324,7 +324,7 @@ export const ExpensesView: React.FC = () => {
               modalTitle="اختيار بند المصروف"
               modalSubtitle="اختر التصنيف المحاسبي للمصروف التشغيلي"
               value={selectedCategory}
-              onChange={(val) => setSelectedCategory(val as ExpenseCategory)}
+              onChange={(val) => setSelectedCategory(val)}
               options={Object.entries(categoriesMap).map(([key, label]) => ({
                 value: key,
                 label,

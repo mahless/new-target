@@ -90,6 +90,8 @@ export interface ServiceOrder {
   form_barcode?: string;
   form_source?: FormSource;
   custom_fields_data?: Record<string, any>;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   status: OrderStatus;
   price: number;
@@ -119,6 +121,8 @@ export interface Payment {
   cash_amount: number;
   electronic_amount: number;
   electronic_type: ElectronicType;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   idempotency_key: string;
   created_at: string;
@@ -148,6 +152,8 @@ export interface CashLedgerEntry {
   reference_id?: string;
   employee_id?: string;
   idempotency_key?: string;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   created_at: string;
 }
@@ -175,6 +181,8 @@ export interface DistributorTransaction {
   type: 'order_charge' | 'supply_payment' | 'opening_balance';
   reference_id?: string;
   idempotency_key?: string;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   balance_after?: number;
   created_at: string;
@@ -203,6 +211,8 @@ export interface ExternalOfficeTransaction {
   type: 'service_order_cost' | 'office_payout' | 'opening_balance';
   reference_id?: string;
   idempotency_key?: string;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   balance_after: number;
   created_at: string;
@@ -225,6 +235,8 @@ export interface Expense {
   amount: number;
   related_order_id?: string | null;
   external_office_id?: string | null;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   idempotency_key: string;
   created_at: string;
@@ -240,6 +252,8 @@ export interface BranchTransfer {
   receiver_employee_id?: string;
   employee_id?: string;
   status: 'pending' | 'completed' | 'rejected';
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   idempotency_key: string;
   created_at: string;
@@ -262,6 +276,8 @@ export interface DailyClosing {
   total_expenses_count?: number;
   employee_name?: string;
   closing_employee_id?: string;
+  receipt_number?: string;
+  description?: string;
   notes?: string;
   created_at: string;
 }

@@ -326,7 +326,7 @@ export const ExternalOfficesView: React.FC = () => {
               <div className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
                 <span className="text-xs text-slate-400">مستحقات المكتب (دائن):</span>
                 <span className="text-base font-black font-mono text-rose-400">
-                  {formatCurrency(office.balance)}
+                  {formatCurrency(office.balance || 0)}
                 </span>
               </div>
             </div>
@@ -487,7 +487,7 @@ export const ExternalOfficesView: React.FC = () => {
                         {tx.amount < 0 ? formatCurrency(Math.abs(tx.amount)) : '-'}
                       </td>
                       <td className="py-2.5 px-3 text-left font-mono font-bold text-slate-200">
-                        {formatCurrency(tx.balance_after)}
+                        {formatCurrency(tx.balance_after || 0)}
                       </td>
                     </tr>
                   ))

@@ -187,8 +187,8 @@ export const DistributorsView: React.FC = () => {
         amount: numAmount,
         notes: supplyNotes.trim() || undefined,
         idempotencyKey,
-        branchId: activeBranch?.id,
-        employeeId: activeEmployee?.id,
+        branchId: activeBranch?.id || "",
+        employeeId: activeEmployee?.id || "",
       });
 
       refreshData();
@@ -322,7 +322,7 @@ export const DistributorsView: React.FC = () => {
               <div className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
                 <span className="text-xs text-slate-400">الرصيد المستحق (مدين):</span>
                 <span className="text-base font-black font-mono text-amber-400">
-                  {formatCurrency(dist.balance)}
+                  {formatCurrency(dist.balance || 0)}
                 </span>
               </div>
             </div>
@@ -507,7 +507,7 @@ export const DistributorsView: React.FC = () => {
                         {new Date(tx.created_at).toLocaleDateString('ar-EG-u-nu-latn')}
                       </td>
                       <td className="py-2.5 px-3">
-                        {tx.type === 'service_order' ? (
+                        {tx.type === 'order_charge' ? (
                           <span className="text-amber-400 font-bold">معاملة خدمة</span>
                         ) : tx.type === 'supply_payment' ? (
                           <span className="text-emerald-400 font-bold">توريد كاش</span>
@@ -523,7 +523,7 @@ export const DistributorsView: React.FC = () => {
                         {tx.amount < 0 ? formatCurrency(Math.abs(tx.amount)) : '-'}
                       </td>
                       <td className="py-2.5 px-3 text-left font-mono font-bold text-slate-200">
-                        {formatCurrency(tx.balance_after)}
+                        {formatCurrency(tx.balance_after || 0)}
                       </td>
                     </tr>
                   ))

@@ -156,8 +156,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       showToast('warning', 'وضع عدم الاتصال', 'تم تفعيل التخزين المحلي الآمن. لن تفقد أي عمليات.');
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isSupabaseConfigured && navigator.onLine) {
+        // Fetch new data when user switches back to the application tab
+        supabaseSyncService.pullFromSupabase().then(() => refreshData());
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Initial background pull on mount if configured
     if (isSupabaseConfigured) {
@@ -172,6 +180,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       unsubscribe();
     };
   }, [isInitializing]);
