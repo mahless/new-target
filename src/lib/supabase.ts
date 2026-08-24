@@ -70,38 +70,10 @@ function saveLocal<T>(key: string, value: T): void {
 // Safe Merge: Keeps local items if they exist locally but not remotely (preventing data loss on failed pushes)
 // Supports multi-device sync and prevents zombie resurrection
 function safeMerge<T extends { id: string; created_at?: string; _synced?: boolean }>(remoteData: T[], localKey: string): T[] {
-  const currentLocal = loadLocal<T[]>(localKey, []);
-  // All remote data came from Supabase, so they are marked as synced
+  // Online-First approach: Supabase is the ultimate source of truth.
+  // We completely overwrite the local state with exactly what is in Supabase.
+  // This completely solves the "zombie records" issue when wiping the database manually.
   const merged: T[] = remoteData.map(item => ({ ...item, _synced: true }));
-
-  currentLocal.forEach(localItem => {
-    const validUuid = toValidUuid(localItem.id);
-
-    // 1. Check if the item was hard-deleted locally (Tombstone check)
-    // If it's a zombie record that we previously deleted, we should NOT resurrect it.
-    if (storage.isTombstoned(localItem.id)) {
-      return; // Skip resurrecting deleted items
-    }
-
-    // 2. If it is already in remoteData (by exact ID or validUuid), it's handled by remoteData
-    const alreadyInRemote = merged.some(m => m.id === localItem.id || (validUuid && m.id === validUuid));
-    if (alreadyInRemote) {
-      return;
-    }
-
-    // 3. If it was previously synced (_synced === true) but no longer exists on remoteData,
-    // it means it was deleted by another user/device or direct DB action in Supabase!
-    // We should respect the remote deletion and not resurrect it.
-    if (localItem._synced) {
-      storage.addTombstone(localItem.id);
-      return;
-    }
-
-    // 4. If it has not yet been synced to Supabase (_synced !== true), it's a new offline item.
-    // Preserve it so that it will be pushed when online!
-    merged.push(localItem);
-  });
-
   return merged.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 }
 
@@ -163,6 +135,16 @@ export const supabaseSyncService = {
             details[tableName] = { pushed: 0, pulled: 0, error: error.message };
           } else {
             details[tableName] = { pushed: items.length, pulled: 0 };
+            // Mark pushed items as synced locally without overwriting new items
+            const currentItems = loadLocal<T[]>(localKey, []);
+            const pushedIds = new Set(items.map((i: any) => i.id));
+            const updatedItems = currentItems.map((i: any) => {
+              if (pushedIds.has(i.id)) {
+                return { ...i, _synced: true };
+              }
+              return i;
+            });
+            saveLocal(localKey, updatedItems);
           }
         } else {
           details[tableName] = { pushed: 0, pulled: 0 };
@@ -536,8 +518,31 @@ export const supabaseSyncService = {
         }
       };
 
-      // 1. Pull branches
+      // 0. Detect Global Wipe (If both branches and employees are empty on server but exist locally)
       const dbBranches = await fetchTable('branches');
+      const dbEmployees = await fetchTable('employees');
+
+      const currentLocalBranches = loadLocal<any[]>(STORAGE_KEYS.BRANCHES, []);
+      const currentLocalEmployees = loadLocal<any[]>(STORAGE_KEYS.EMPLOYEES, []);
+
+      if (
+        Array.isArray(dbBranches) &&
+        Array.isArray(dbEmployees) &&
+        dbBranches.length === 0 &&
+        dbEmployees.length === 0 &&
+        (currentLocalBranches.length > 0 || currentLocalEmployees.length > 0)
+      ) {
+        console.warn('[Sync] Detected empty core tables (branches & employees). Assuming COMPLETE DB RESET via SQL. Wiping all local data.');
+        await storage.clearAllLocalData();
+        
+        // Return immediately so we don't try to merge anything, the app will redirect to login (or reload).
+        if (typeof window !== 'undefined') {
+          setTimeout(() => window.location.reload(), 1500);
+        }
+        return { success: true, message: 'تم مسح القاعدة السحابية. يتم الآن مسح كافة البيانات المحلية وتحديث النظام.' };
+      }
+
+      // 1. Pull branches
       if (dbBranches && Array.isArray(dbBranches)) {
         const localBranches = dbBranches.map(b => ({
           id: b.id,
@@ -554,7 +559,6 @@ export const supabaseSyncService = {
       }
 
       // 2. Pull employees
-      const dbEmployees = await fetchTable('employees');
       if (dbEmployees && Array.isArray(dbEmployees)) {
         const localEmployees = dbEmployees.map(e => ({
           id: e.id,

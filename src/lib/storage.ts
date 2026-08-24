@@ -107,6 +107,14 @@ function load<T>(key: string, defaultValue: T): T {
 }
 
 function save<T>(key: string, value: T): void {
+  // --- ONLINE FIRST ENFORCEMENT ---
+  // Block any transactional writes if offline.
+  if (key !== STORAGE_KEYS.ACTIVE_BRANCH_ID && key !== STORAGE_KEYS.ACTIVE_EMPLOYEE_ID && key !== STORAGE_KEYS.IDEMPOTENCY_CACHE && key !== 'target_daily_session_active' && key !== 'target_session_date') {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      throw new Error("عذراً، الاتصال بالإنترنت مقطوع. لا يمكن تنفيذ العملية (نظام Online-First مفعل).");
+    }
+  }
+
   memoryCache[key] = value;
   
   // Asynchronously save to IndexedDB
