@@ -1479,7 +1479,7 @@ export class ResilientStorageService {
       const totalOrdersValue = distOrders.reduce((sum, o) => sum + Number(o.price || 0), 0);
 
       // Opening balance charges (transactions not linked to a specific order)
-      const openingTxns = txns.filter(t => matchIds(t.distributor_id, d.id) && t.type === 'order_charge' && !t.reference_id);
+      const openingTxns = txns.filter(t => matchIds(t.distributor_id, d.id) && (t.type === 'order_charge' || t.type === 'opening_balance') && !t.reference_id);
       const totalOpening = openingTxns.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
       const distSupplyTxns = txns.filter(t => matchIds(t.distributor_id, d.id) && t.type === 'supply_payment');
@@ -1500,7 +1500,27 @@ export class ResilientStorageService {
   public getDistributorTransactions(distributorId?: string): DistributorTransaction[] {
     const all = load<DistributorTransaction[]>(STORAGE_KEYS.DISTRIBUTOR_TXNS, []);
     if (!distributorId) return all;
-    return all.filter(t => matchIds(t.distributor_id, distributorId));
+    const filtered = all.filter(t => matchIds(t.distributor_id, distributorId));
+
+    // Sort chronologically (oldest first) to compute running balance after each transaction
+    const sorted = [...filtered].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    let runningBalance = 0;
+    const withRunningBalance = sorted.map(t => {
+      const isCharge = t.type === 'order_charge' || t.type === 'opening_balance';
+      if (isCharge) {
+        runningBalance += Number(t.amount || 0);
+      } else {
+        runningBalance -= Number(t.amount || 0);
+      }
+      return {
+        ...t,
+        balance_after: Number(runningBalance.toFixed(2)),
+      };
+    });
+
+    // Return newest first for display
+    return withRunningBalance.reverse();
   }
 
   public saveDistributor(dist: { id?: string; name: string; phone: string; code: string; address?: string; is_active?: boolean }): Distributor {

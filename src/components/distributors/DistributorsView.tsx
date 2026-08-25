@@ -76,8 +76,28 @@ export const DistributorsView: React.FC = () => {
   }, [distributors, debouncedSearchQuery]);
 
   const totalDistributorsBalance = useMemo(() => {
-    return distributors.reduce((sum, d) => sum + Number(d.balance_due || d.balance || 0), 0);
+    return distributors.reduce((sum, d) => sum + Math.max(0, Number(d.balance_due ?? d.balance ?? 0)), 0);
   }, [distributors]);
+
+  const totalSuppliedAll = useMemo(() => {
+    return distributors.reduce((sum, d) => sum + Number(d.total_supplied || 0), 0);
+  }, [distributors]);
+
+  const totalOrdersAndOpeningAll = useMemo(() => {
+    return distributors.reduce((sum, d) => sum + Number(d.total_orders_value || 0), 0);
+  }, [distributors]);
+
+  const activeDistributors = useMemo(() => {
+    return distributors.filter(d => d.is_active);
+  }, [distributors]);
+
+  const settledDistributorsCount = useMemo(() => {
+    return activeDistributors.filter(d => Number(d.balance_due ?? d.balance ?? 0) <= 0).length;
+  }, [activeDistributors]);
+
+  const indebtedDistributorsCount = useMemo(() => {
+    return activeDistributors.filter(d => Number(d.balance_due ?? d.balance ?? 0) > 0).length;
+  }, [activeDistributors]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -171,16 +191,21 @@ export const DistributorsView: React.FC = () => {
   // 2. Record Cash Supply from Distributor
   const handleRecordSupply = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const numAmount = Math.max(0, Number(supplyAmount) || 0);
 
     if (!targetDistributorForSupply || numAmount <= 0) {
-      showToast('error', 'مبلغ غير صالح', 'يرجى إدخال مبلغ توريد صحيح.');
+      showToast('error', 'مبلغ غير صالح', 'يرجى إدخال مبلغ توريد صحيح أكبر من الصفر.');
       return;
     }
 
     try {
       setIsSubmitting(true);
       const idempotencyKey = generateIdempotencyKey('dist-supply');
+      const distBefore = targetDistributorForSupply;
+      const initialBal = Number(distBefore.balance_due ?? distBefore.balance ?? 0);
+      const remainingBal = Math.max(0, initialBal - numAmount);
 
       storage.recordDistributorSupply({
         distributorId: targetDistributorForSupply.id,
@@ -192,11 +217,27 @@ export const DistributorsView: React.FC = () => {
       });
 
       refreshData();
-      showToast(
-        'success',
-        'تم توريد النقدية بنجاح',
-        `تم إضافة ${numAmount} إلى درج فرع ${activeBranch?.name} وخصمها من حساب الموزع ${targetDistributorForSupply.name}.`
-      );
+
+      if (remainingBal === 0) {
+        showToast(
+          'success',
+          'تم سداد كامل المديونية بنجاح',
+          `تم استلام ${formatCurrency(numAmount)} ج.م وإيداعها في درج فرع ${activeBranch?.name || ''}. أصبح حساب الموزع ${distBefore.name} خالياً من أي مديونية (0.00 ج.م).`
+        );
+      } else {
+        showToast(
+          'success',
+          'تم توريد النقدية بنجاح',
+          `تم استلام ${formatCurrency(numAmount)} ج.م وإيداعها في درج فرع ${activeBranch?.name || ''}. المديونية المتبقية على الموزع ${distBefore.name} هي ${formatCurrency(remainingBal)} ج.م.`
+        );
+      }
+
+      // Sync statement modal target if currently open
+      if (selectedDistributorForStatement && selectedDistributorForStatement.id === targetDistributorForSupply.id) {
+        const updatedList = storage.getDistributors();
+        const updatedTarget = updatedList.find(d => d.id === targetDistributorForSupply.id);
+        if (updatedTarget) setSelectedDistributorForStatement(updatedTarget);
+      }
 
       setIsSupplyModalOpen(false);
       setSupplyAmount('0');
@@ -240,117 +281,217 @@ export const DistributorsView: React.FC = () => {
       </div>
 
       {/* Ribbon Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">إجمالي المديونية المستحقة على الموزعين</div>
-          <div className="text-2xl font-black text-amber-400 font-mono tracking-tight mt-1">
-            {formatCurrency(totalDistributorsBalance)}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card 1: Total Debt Due */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-slate-400 font-semibold">إجمالي المديونية المستحقة على الموزعين</div>
+            <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+              <Wallet className="w-4 h-4" />
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">مبالغ مستحقة لمكتبنا طرف الموزعين</p>
+          <div className="text-2xl font-black text-amber-400 font-mono tracking-tight mt-1">
+            {formatCurrency(totalDistributorsBalance)} ج.م
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
+            <span>إجمالي المسحوبات: <strong className="text-slate-200 font-mono">{formatCurrency(totalOrdersAndOpeningAll)}</strong></span>
+          </div>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <div className="text-xs text-slate-400 font-semibold">عدد الموزعين النشطين</div>
-          <div className="text-2xl font-black text-sky-400 font-mono tracking-tight mt-1">
-            {distributors.filter(d => d.is_active).length} موزع
+        {/* Card 2: Total Cash Supplied */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-slate-400 font-semibold">إجمالي التوريدات النقدية (كاش)</div>
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <ArrowDownLeft className="w-4 h-4" />
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">يتعاملون مع شبكة الفروع</p>
+          <div className="text-2xl font-black text-emerald-400 font-mono tracking-tight mt-1">
+            {formatCurrency(totalSuppliedAll)} ج.م
+          </div>
+          <div className="text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-800/80">
+            مبالغ محصلة ومودعة في خزينة ودروج الفروع
+          </div>
         </div>
+
+        {/* Card 3: Active & Settled Distributors */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-slate-400 font-semibold">حالة حسابات الموزعين النشطين</div>
+            <span className="p-1.5 rounded-lg bg-sky-500/10 text-sky-400">
+              <Users2 className="w-4 h-4" />
+            </span>
+          </div>
+          <div className="text-2xl font-black text-sky-400 font-mono tracking-tight mt-1">
+            {activeDistributors.length} موزع نشط
+          </div>
+          <div className="flex items-center gap-3 text-[11px] mt-2 pt-2 border-t border-slate-800/80">
+            <span className="text-amber-400 font-bold">{indebtedDistributorsCount} عليهم مديونية</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-emerald-400 font-bold">{settledDistributorsCount} خالصين 100%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-3">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()))}
+          placeholder="ابحث باسم الموزع، الكود، أو رقم الهاتف..."
+          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+        />
       </div>
 
       {/* Distributors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDistributors.map(dist => (
-          <div
-            key={dist.id}
-            className="bg-slate-900/80 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-sm flex flex-col justify-between transition-all"
-          >
-            <div>
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="font-bold text-slate-100 text-sm flex items-center gap-2">
-                  {dist.name}
-                  {!dist.is_active && (
-                    <span className="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded">موقوف</span>
-                  )}
-                </h3>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-800 text-sky-400 font-bold">
-                    {dist.code}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetDistributorForAction(dist);
-                      setDistributorName(dist.name);
-                      setDistributorCode(dist.code);
-                      setDistributorPhone(dist.phone);
-                      setDistributorAddress(dist.address || '');
-                      setIsEditDistributorModalOpen(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-sky-400/10 rounded-lg transition-colors"
-                    title="تعديل الموزع"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetDistributorForAction(dist);
-                      setIsDeleteModalOpen(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors"
-                    title="حذف الموزع"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+        {filteredDistributors.map(dist => {
+          const currentBalance = Number(dist.balance_due ?? dist.balance ?? 0);
+          const isSettled = currentBalance <= 0;
+          const isCredit = currentBalance < 0;
 
-              <div className="space-y-1.5 text-xs text-slate-400 mt-3">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="font-mono">{dist.phone}</span>
-                </div>
-                {dist.address && (
-                  <div className="flex items-center gap-2">
-                    <Building className="w-3.5 h-3.5 text-slate-500" />
-                    <span>{dist.address}</span>
+          return (
+            <div
+              key={dist.id}
+              className={`bg-slate-900/80 border rounded-2xl p-5 shadow-sm flex flex-col justify-between transition-all ${
+                isSettled
+                  ? 'border-slate-800 hover:border-emerald-500/40'
+                  : 'border-slate-800 hover:border-amber-500/40'
+              }`}
+            >
+              <div>
+                <div className="flex items-start justify-between pb-3 border-b border-slate-800 gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-100 text-sm flex items-center gap-2">
+                      {dist.name}
+                      {!dist.is_active && (
+                        <span className="text-[10px] bg-rose-500/20 text-rose-400 px-1.5 py-0.5 rounded">موقوف</span>
+                      )}
+                    </h3>
+                    <div className="mt-1">
+                      {isCredit ? (
+                        <span className="text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold">
+                          رصيد دائم (+{formatCurrency(Math.abs(currentBalance))})
+                        </span>
+                      ) : isSettled ? (
+                        <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          خالص المديونية 100%
+                        </span>
+                      ) : (
+                        <span className="text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">
+                          مطلوب سداد مديونية
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  <div className="flex items-center gap-1">
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-800 text-sky-400 font-bold">
+                      {dist.code}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetDistributorForAction(dist);
+                        setDistributorName(dist.name);
+                        setDistributorCode(dist.code);
+                        setDistributorPhone(dist.phone);
+                        setDistributorAddress(dist.address || '');
+                        setIsEditDistributorModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-sky-400 hover:bg-sky-400/10 rounded-lg transition-colors"
+                      title="تعديل الموزع"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetDistributorForAction(dist);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors"
+                      title="حذف الموزع"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-xs text-slate-400 mt-3">
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="font-mono">{dist.phone}</span>
+                  </div>
+                  {dist.address && (
+                    <div className="flex items-center gap-2">
+                      <Building className="w-3.5 h-3.5 text-slate-500" />
+                      <span>{dist.address}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Balance Box */}
+                <div className={`mt-4 p-3.5 rounded-xl border flex flex-col gap-2.5 ${
+                  isSettled
+                    ? 'bg-emerald-950/20 border-emerald-500/30'
+                    : 'bg-amber-950/20 border-amber-500/30'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-300 font-bold">الرصيد المستحق (الصافي):</span>
+                    <span className={`text-base font-black font-mono tracking-tight ${
+                      isSettled ? 'text-emerald-400' : 'text-amber-400'
+                    }`}>
+                      {formatCurrency(currentBalance)} ج.م
+                    </span>
+                  </div>
+
+                  {/* Financial Breakdown Grid */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/60 text-[11px]">
+                    <div className="bg-slate-950/80 p-2 rounded-lg border border-slate-800">
+                      <span className="text-slate-500 block">إجمالي الخدمات:</span>
+                      <span className="font-mono font-bold text-slate-300">
+                        {formatCurrency(dist.total_orders_value || 0)}
+                      </span>
+                    </div>
+                    <div className="bg-slate-950/80 p-2 rounded-lg border border-slate-800">
+                      <span className="text-slate-500 block">المورد كاش:</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {formatCurrency(dist.total_supplied || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
-                <span className="text-xs text-slate-400">الرصيد المستحق (مدين):</span>
-                <span className="text-base font-black font-mono text-amber-400">
-                  {formatCurrency(dist.balance || 0)}
-                </span>
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetDistributorForSupply(dist);
+                    setIsSupplyModalOpen(true);
+                  }}
+                  className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <ArrowDownLeft className="w-3.5 h-3.5" />
+                  <span>توريد نقدية</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedDistributorForStatement(dist)}
+                  className="px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition-colors flex items-center gap-1"
+                  title="عرض كشف الحساب التفصيلي"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-sky-400" />
+                  <span>كشف حساب</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-800/80">
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetDistributorForSupply(dist);
-                  setIsSupplyModalOpen(true);
-                }}
-                className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-bold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5"
-              >
-                <ArrowDownLeft className="w-3.5 h-3.5" />
-                <span>توريد نقدية</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedDistributorForStatement(dist)}
-                className="px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition-colors"
-                title="عرض كشف الحساب التفصيلي"
-              >
-                كشف حساب
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Record Supply Modal */}
@@ -365,7 +506,7 @@ export const DistributorsView: React.FC = () => {
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between">
             <span className="text-slate-400">إجمالي مديونية الموزع الحالية:</span>
             <span className="font-bold font-mono text-amber-400 text-sm">
-              {formatCurrency(targetDistributorForSupply?.balance || 0)}
+              {formatCurrency(targetDistributorForSupply ? Number(targetDistributorForSupply.balance_due ?? targetDistributorForSupply.balance ?? 0) : 0)} ج.م
             </span>
           </div>
 
@@ -374,18 +515,18 @@ export const DistributorsView: React.FC = () => {
               <label className="text-xs font-bold text-slate-300">
                 مبلغ التوريد النقدي <span className="text-rose-400">*</span>:
               </label>
-              {targetDistributorForSupply && (targetDistributorForSupply.balance || 0) > 0 && (
+              {targetDistributorForSupply && Number(targetDistributorForSupply.balance_due ?? targetDistributorForSupply.balance ?? 0) > 0 && (
                 <div className="flex gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setSupplyAmount(String(targetDistributorForSupply.balance || 0))}
+                    onClick={() => setSupplyAmount(String(targetDistributorForSupply.balance_due ?? targetDistributorForSupply.balance ?? 0))}
                     className="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold px-2 py-0.5 rounded transition-colors"
                   >
                     سداد كامل المديونية
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSupplyAmount(String(Math.floor((targetDistributorForSupply.balance || 0) / 2)))}
+                    onClick={() => setSupplyAmount(String(Math.floor(Number(targetDistributorForSupply.balance_due ?? targetDistributorForSupply.balance ?? 0) / 2)))}
                     className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-2 py-0.5 rounded transition-colors"
                   >
                     سداد النصف
@@ -419,9 +560,9 @@ export const DistributorsView: React.FC = () => {
               <div className="mt-2 p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 text-xs flex items-center justify-between">
                 <span className="text-slate-400">المديونية المتبقية بعد هذا التوريد:</span>
                 <span className={`font-mono font-bold ${
-                  (targetDistributorForSupply.balance || 0) - Number(supplyAmount) > 0 ? 'text-amber-400' : 'text-emerald-400'
+                  Number(targetDistributorForSupply.balance_due ?? targetDistributorForSupply.balance ?? 0) - Number(supplyAmount) > 0 ? 'text-amber-400' : 'text-emerald-400'
                 }`}>
-                  {formatCurrency(Math.max(0, (targetDistributorForSupply.balance || 0) - Number(supplyAmount)))}
+                  {formatCurrency(Math.max(0, Number(targetDistributorForSupply.balance_due ?? targetDistributorForSupply.balance ?? 0) - Number(supplyAmount)))} ج.م
                 </span>
               </div>
             )}
