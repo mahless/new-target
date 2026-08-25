@@ -70,10 +70,27 @@ function saveLocal<T>(key: string, value: T): void {
 // Safe Merge: Keeps local items if they exist locally but not remotely (preventing data loss on failed pushes)
 // Supports multi-device sync and prevents zombie resurrection
 function safeMerge<T extends { id: string; created_at?: string; _synced?: boolean }>(remoteData: T[], localKey: string): T[] {
-  // Online-First approach: Supabase is the ultimate source of truth.
-  // We completely overwrite the local state with exactly what is in Supabase.
-  // This completely solves the "zombie records" issue when wiping the database manually.
-  const merged: T[] = remoteData.map(item => ({ ...item, _synced: true }));
+  const localItems = loadLocal<T[]>(localKey, []);
+  const tombstones = getStorageData<string[]>(STORAGE_KEYS.TOMBSTONES, []);
+  const tombstoneSet = new Set(tombstones);
+
+  const mergedMap = new Map<string, T>();
+
+  // 1. Add remote data (marking as _synced) unless tombstoned
+  remoteData.forEach(item => {
+    if (!tombstoneSet.has(item.id)) {
+      mergedMap.set(item.id, { ...item, _synced: true });
+    }
+  });
+
+  // 2. Preserve local items that are unsynced or not present in remoteData
+  localItems.forEach(localItem => {
+    if (!mergedMap.has(localItem.id) && !tombstoneSet.has(localItem.id)) {
+      mergedMap.set(localItem.id, localItem);
+    }
+  });
+
+  const merged = Array.from(mergedMap.values());
   return merged.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 }
 
@@ -82,7 +99,7 @@ function safeMerge<T extends { id: string; created_at?: string; _synced?: boolea
 export function toValidUuid(val: string | null | undefined): string | null {
   if (!val) return null;
   const str = String(val).trim();
-  if (!str) return null;
+  if (!str || str.toLowerCase() === 'null' || str.toLowerCase() === 'undefined' || str.toLowerCase() === 'none') return null;
 
   // If already a valid UUID hex format
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -118,7 +135,7 @@ export const supabaseSyncService = {
       return { success: false, message: 'Supabase is not configured yet. Please check your settings.' };
     }
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
       return { success: false, message: 'الجهاز غير متصل بالإنترنت حالياً. تم حفظ العمليات محلياً وستتم المزامنة تلقائياً عند استعادة الاتصال.' };
     }
 
@@ -325,36 +342,60 @@ export const supabaseSyncService = {
 
       // 11. Distributor Transactions
       await pushTable('distributor_transactions', STORAGE_KEYS.DISTRIBUTOR_TXNS, (distTxns: any[]) =>
-        distTxns.map(t => ({
-          id: toValidUuid(t.id),
-          distributor_id: toValidUuid(t.distributor_id),
-          branch_id: toValidUuid(t.branch_id),
-          employee_id: toValidUuid(t.employee_id),
-          amount: t.amount,
-          type: t.type,
-          reference_id: toValidUuid(t.reference_id),
-          idempotency_key: t.idempotency_key || null,
-          notes: t.notes || null,
-          balance_after: t.balance_after || null,
-          created_at: t.created_at,
-        }))
+        distTxns.map(t => {
+          let type = t.type || 'order_charge';
+          if (type === 'payment') type = 'supply_payment';
+          if (type === 'charge') type = 'order_charge';
+          if (!['order_charge', 'supply_payment', 'opening_balance'].includes(type)) {
+            type = 'order_charge';
+          }
+
+          const defaultBranchUuid = toValidUuid('b1-dokki');
+          const defaultEmpUuid = toValidUuid('emp-1');
+
+          return {
+            id: toValidUuid(t.id),
+            distributor_id: toValidUuid(t.distributor_id),
+            branch_id: toValidUuid(t.branch_id) || defaultBranchUuid,
+            employee_id: toValidUuid(t.employee_id) || defaultEmpUuid,
+            amount: Math.max(0.01, Math.abs(Number(t.amount || 0))),
+            type,
+            reference_id: toValidUuid(t.reference_id),
+            idempotency_key: t.idempotency_key || null,
+            notes: t.notes || null,
+            balance_after: t.balance_after ? Number(t.balance_after) : null,
+            created_at: t.created_at || new Date().toISOString(),
+          };
+        })
       );
 
       // 11b. External Office Transactions
       await pushTable('external_office_transactions', STORAGE_KEYS.EXTERNAL_OFFICE_TXNS, (officeTxns: any[]) =>
-        officeTxns.map(t => ({
-          id: toValidUuid(t.id),
-          external_office_id: toValidUuid(t.external_office_id),
-          branch_id: toValidUuid(t.branch_id),
-          employee_id: toValidUuid(t.employee_id),
-          amount: t.amount,
-          type: t.type,
-          reference_id: toValidUuid(t.reference_id),
-          idempotency_key: t.idempotency_key || null,
-          notes: t.notes || null,
-          balance_after: t.balance_after ?? 0.0,
-          created_at: t.created_at,
-        }))
+        officeTxns.map(t => {
+          let type = t.type || 'service_order_cost';
+          if (type === 'payout' || type === 'payment') type = 'office_payout';
+          if (type === 'cost') type = 'service_order_cost';
+          if (!['service_order_cost', 'office_payout', 'opening_balance'].includes(type)) {
+            type = 'service_order_cost';
+          }
+
+          const defaultBranchUuid = toValidUuid('b1-dokki');
+          const defaultEmpUuid = toValidUuid('emp-1');
+
+          return {
+            id: toValidUuid(t.id),
+            external_office_id: toValidUuid(t.external_office_id),
+            branch_id: toValidUuid(t.branch_id) || defaultBranchUuid,
+            employee_id: toValidUuid(t.employee_id) || defaultEmpUuid,
+            amount: Math.abs(Number(t.amount || 0)),
+            type,
+            reference_id: toValidUuid(t.reference_id),
+            idempotency_key: t.idempotency_key || null,
+            notes: t.notes || null,
+            balance_after: t.balance_after ? Number(t.balance_after) : 0.0,
+            created_at: t.created_at || new Date().toISOString(),
+          };
+        })
       );
 
       // 12. Expenses

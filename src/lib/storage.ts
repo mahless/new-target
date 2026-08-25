@@ -110,7 +110,7 @@ function save<T>(key: string, value: T): void {
   // --- ONLINE FIRST ENFORCEMENT ---
   // Block any transactional writes if offline.
   if (key !== STORAGE_KEYS.ACTIVE_BRANCH_ID && key !== STORAGE_KEYS.ACTIVE_EMPLOYEE_ID && key !== STORAGE_KEYS.IDEMPOTENCY_CACHE && key !== 'target_daily_session_active' && key !== 'target_session_date') {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
       throw new Error("عذراً، الاتصال بالإنترنت مقطوع. لا يمكن تنفيذ العملية (نظام Online-First مفعل).");
     }
   }
@@ -851,6 +851,7 @@ export class ResilientStorageService {
 
     const result = { order, payment: paymentRecord };
     this.recordIdempotency(params.idempotencyKey, result);
+    triggerAutoPush();
     return result;
   }
 
@@ -959,6 +960,7 @@ export class ResilientStorageService {
 
     const result = { order, payment };
     this.recordIdempotency(params.idempotencyKey, result);
+    triggerAutoPush();
     return result;
   }
 
