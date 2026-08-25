@@ -68,25 +68,41 @@ function saveLocal<T>(key: string, value: T): void {
 }
 
 // Safe Merge: Keeps local items if they exist locally but not remotely (preventing data loss on failed pushes)
-// Supports multi-device sync and prevents zombie resurrection
+// Supports multi-device sync, normalizes UUIDs, and prevents duplicate records or zombie resurrection
 function safeMerge<T extends { id: string; created_at?: string; _synced?: boolean }>(remoteData: T[], localKey: string): T[] {
   const localItems = loadLocal<T[]>(localKey, []);
   const tombstones = getStorageData<string[]>(STORAGE_KEYS.TOMBSTONES, []);
-  const tombstoneSet = new Set(tombstones);
+
+  const tombstoneSet = new Set<string>();
+  tombstones.forEach(id => {
+    tombstoneSet.add(id);
+    const valid = toValidUuid(id);
+    if (valid) tombstoneSet.add(valid);
+  });
 
   const mergedMap = new Map<string, T>();
+  const remoteKnownIds = new Set<string>();
 
   // 1. Add remote data (marking as _synced) unless tombstoned
   remoteData.forEach(item => {
-    if (!tombstoneSet.has(item.id)) {
-      mergedMap.set(item.id, { ...item, _synced: true });
+    const validId = toValidUuid(item.id) || item.id;
+    if (!tombstoneSet.has(item.id) && !tombstoneSet.has(validId)) {
+      const normalizedItem = { ...item, id: validId, _synced: true };
+      mergedMap.set(validId, normalizedItem);
+      remoteKnownIds.add(validId);
+      remoteKnownIds.add(item.id);
     }
   });
 
-  // 2. Preserve local items that are unsynced or not present in remoteData
+  // 2. Preserve local items ONLY if neither raw ID nor valid UUID is present in remoteData
   localItems.forEach(localItem => {
-    if (!mergedMap.has(localItem.id) && !tombstoneSet.has(localItem.id)) {
-      mergedMap.set(localItem.id, localItem);
+    const validLocalId = toValidUuid(localItem.id) || localItem.id;
+
+    const isTombstoned = tombstoneSet.has(localItem.id) || tombstoneSet.has(validLocalId);
+    const isAlreadyInRemote = remoteKnownIds.has(localItem.id) || remoteKnownIds.has(validLocalId);
+
+    if (!isTombstoned && !isAlreadyInRemote) {
+      mergedMap.set(validLocalId, { ...localItem, id: validLocalId });
     }
   });
 
@@ -152,16 +168,24 @@ export const supabaseSyncService = {
             details[tableName] = { pushed: 0, pulled: 0, error: error.message };
           } else {
             details[tableName] = { pushed: items.length, pulled: 0 };
-            // Mark pushed items as synced locally without overwriting new items
+            // Mark pushed items as synced locally and normalize their IDs to valid UUIDs
             const currentItems = loadLocal<T[]>(localKey, []);
-            const pushedIds = new Set(items.map((i: any) => i.id));
-            const updatedItems = currentItems.map((i: any) => {
-              if (pushedIds.has(i.id)) {
-                return { ...i, _synced: true };
+            const pushedOriginalIds = new Set(items.map((i: any) => i.id));
+            const pushedValidIds = new Set(items.map((i: any) => toValidUuid(i.id) || i.id));
+
+            const updatedMap = new Map<string, any>();
+            currentItems.forEach((i: any) => {
+              const validId = toValidUuid(i.id) || i.id;
+              const isPushed = pushedOriginalIds.has(i.id) || pushedValidIds.has(validId) || pushedValidIds.has(i.id);
+              if (!updatedMap.has(validId)) {
+                updatedMap.set(validId, {
+                  ...i,
+                  id: validId,
+                  _synced: isPushed ? true : (i._synced ?? false),
+                });
               }
-              return i;
             });
-            saveLocal(localKey, updatedItems);
+            saveLocal(localKey, Array.from(updatedMap.values()));
           }
         } else {
           details[tableName] = { pushed: 0, pulled: 0 };

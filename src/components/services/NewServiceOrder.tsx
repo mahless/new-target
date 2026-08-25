@@ -233,6 +233,8 @@ export const NewServiceOrder: React.FC = () => {
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isSubmitting) return;
+
     // 0. Role Guard
     if (activeEmployee?.role === 'viewer') {
       showToast('error', 'صلاحية غير كافية', 'حسابك بصلاحية مشاهد فقط، لا يمكن تنفيذ أو تسجيل المعاملات.');

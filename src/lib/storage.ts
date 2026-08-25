@@ -550,7 +550,7 @@ export class ResilientStorageService {
     }
 
     const newCustomer: Customer = {
-      id: `cust-${Date.now()}`,
+      id: toValidUuid(`cust-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       name: name.trim(),
       phone: phone.trim(),
       national_id: nationalId ? nationalId.trim() : undefined,
@@ -604,7 +604,7 @@ export class ResilientStorageService {
     const allLedger = load<CashLedgerEntry[]>(STORAGE_KEYS.LEDGER, []);
 
     const entry: CashLedgerEntry = {
-      id: `ldg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: toValidUuid(`ldg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`)!,
       branch_id: branchId,
       transaction_type: type,
       amount: Number(amount.toFixed(2)),
@@ -706,7 +706,7 @@ export class ResilientStorageService {
     const timestamp = Date.now();
     const orderNumber = `ORD-${new Date().getFullYear().toString().slice(-2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const orderId = `ord-${timestamp}`;
+    const orderId = toValidUuid(`ord-${timestamp}-${Math.floor(Math.random() * 10000)}`)!;
     const now = new Date().toISOString();
 
     const order: ServiceOrder = {
@@ -752,7 +752,7 @@ export class ResilientStorageService {
     // 6. Record Payment if any amount paid
     if (totalPaid > 0) {
       paymentRecord = {
-        id: `pmt-${timestamp}`,
+        id: toValidUuid(`pmt-${timestamp}-${Math.floor(Math.random() * 10000)}`)!,
         order_id: order.id,
         branch_id: branchId,
         employee_id: employeeId,
@@ -810,7 +810,7 @@ export class ResilientStorageService {
         const txns = this.getExternalOfficeTransactions();
         const newBalance = Number(((office.balance || 0) + extOfficeCost).toFixed(2));
         const txn: ExternalOfficeTransaction = {
-          id: `off-txn-${timestamp}`,
+          id: toValidUuid(`off-txn-${timestamp}-${Math.floor(Math.random() * 10000)}`)!,
           external_office_id: office.id,
           branch_id: branchId,
           employee_id: employeeId,
@@ -1600,7 +1600,7 @@ export class ResilientStorageService {
   ): DistributorTransaction {
     const txns = load<DistributorTransaction[]>(STORAGE_KEYS.DISTRIBUTOR_TXNS, []);
     const txn: DistributorTransaction = {
-      id: `dist-txn-${Date.now()}`,
+      id: toValidUuid(`dist-txn-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       distributor_id: distributorId,
       branch_id: branchId,
       employee_id: employeeId,
@@ -1786,7 +1786,7 @@ export class ResilientStorageService {
     if (params.openingBalance && params.openingBalance > 0) {
       const txns = this.getExternalOfficeTransactions();
       const txn: ExternalOfficeTransaction = {
-        id: `off-txn-${Date.now()}`,
+        id: toValidUuid(`off-txn-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
         external_office_id: off.id,
         amount: params.openingBalance,
         type: 'opening_balance',
@@ -1854,7 +1854,7 @@ export class ResilientStorageService {
 
     // 2. Record Expense entry so it appears under Expenses View ONLY after manual payment
     const expEntry: Expense = {
-      id: `exp-${Date.now()}`,
+      id: toValidUuid(`exp-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       branch_id: branchId,
       employee_id: employeeId,
       category_id: null,
@@ -1874,7 +1874,7 @@ export class ResilientStorageService {
     const currentBalance = (office.balance || 0) - amount;
 
     const txn: ExternalOfficeTransaction = {
-      id: `off-txn-${Date.now()}`,
+      id: toValidUuid(`off-txn-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       external_office_id: office.id,
       branch_id: branchId,
       employee_id: employeeId,
@@ -1949,7 +1949,7 @@ export class ResilientStorageService {
     const branchExpenses = this.getExpenses(params.branchId).filter(e => e.created_at.startsWith(params.closingDate));
 
     const closing: DailyClosing = {
-      id: `cls-${Date.now()}`,
+      id: toValidUuid(`cls-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       branch_id: params.branchId,
       closing_date: params.closingDate,
       system_calculated_balance: Number(branchDrawerBalance.toFixed(2)),
@@ -2018,7 +2018,7 @@ export class ResilientStorageService {
     const emp = employees.find(e => e.id === employeeId);
 
     const log: AuditLog = {
-      id: `aud-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: toValidUuid(`aud-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`)!,
       employee_id: employeeId,
       employee_name: metadata?.employeeName || emp?.name || 'النظام',
       branch_id: metadata?.branchId || this.getActiveBranchId(),
@@ -2135,7 +2135,7 @@ export class ResilientStorageService {
     const today = new Date().toISOString().split('T')[0];
 
     const closing: DailyClosing = {
-      id: `cls-${Date.now()}`,
+      id: toValidUuid(`cls-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       branch_id: branchId,
       closing_date: today,
       system_calculated_balance: systemCalculatedBalance,
@@ -2203,7 +2203,7 @@ export class ResilientStorageService {
     }
 
     const transfer: BranchTransfer = {
-      id: `trf-${Date.now()}`,
+      id: toValidUuid(`trf-${Date.now()}-${Math.floor(Math.random() * 10000)}`)!,
       reference_number: `TRF-${Math.floor(1000 + Math.random() * 9000)}`,
       from_branch_id: fromBranchId,
       to_branch_id: params.toBranchId,
